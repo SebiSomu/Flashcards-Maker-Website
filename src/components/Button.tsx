@@ -5,7 +5,6 @@ interface ButtonProps {
     type?: "button" | "submit" | "reset";
 }
 
-
 const Button = ({
                     text,
                     onClick,
