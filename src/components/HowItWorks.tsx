@@ -23,7 +23,7 @@ const HowItWorks = () => {
 
     return (
         <section className="max-w-md text-left">
-            <h2 className="text-md font-black text-blue-500 uppercase tracking-[0.3em] mb-12">
+            <h2 className="text-md font-black text-primary uppercase tracking-[0.3em] mb-12">
                 // System Operations
             </h2>
 
@@ -37,16 +37,16 @@ const HowItWorks = () => {
                 {steps.map((step) => (
                     <motion.div key={step.id} className="flex gap-6" variants={itemVariants}>
                         <div className="flex flex-col items-center">
-                            <span className="text-blue-600 font-black text-sm tracking-tighter">
+                            <span className="text-primary font-black text-sm tracking-tighter">
                                 {step.id}
                             </span>
-                            <div className="w-[1px] h-full bg-slate-800 mt-2"></div>
+                            <div className="w-[1px] h-full bg-base-300 mt-2"></div>
                         </div>
                         <div className="pb-4">
-                            <h3 className="text-white font-black text-md uppercase mb-2 tracking-tight italic">
+                            <h3 className="text-base-content font-black text-md uppercase mb-2 tracking-tight italic">
                                 {step.title}
                             </h3>
-                            <p className="text-slate-500 text-sm leading-snug">
+                            <p className="text-base-content/60 text-sm leading-snug">
                                 {step.desc}
                             </p>
                         </div>

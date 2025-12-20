@@ -14,7 +14,7 @@ const Home = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="min-h-screen bg-slate-950 flex flex-col relative">
+        <div className="min-h-screen bg-base-100 flex flex-col relative">
             <MainNavBar />
 
             <div className="flex-1 flex flex-col items-start px-10 md:px-20 pt-28 w-full">
@@ -23,7 +23,7 @@ const Home = () => {
                     {/* Left Side: Text and CTA */}
                     <div>
                         <Hero title="Your no1 study weapon" />
-                        <p className="mt-6 text-slate-400 text-lg leading-relaxed max-w-md">
+                        <p className="mt-6 text-base-content/70 text-lg leading-relaxed max-w-md">
                             Master any subject with our intelligent flashcard system. Create, organize, and study faster than ever before.
                         </p>
 
@@ -31,12 +31,12 @@ const Home = () => {
                             <Button
                                 text="Get Started"
                                 onClick={() => setIsLoginModalOpen(true)}
-                                className="bg-white text-slate-950 hover:bg-slate-200 border-none px-6 py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.5)]"
+                                className="bg-base-content text-base-100 hover:bg-base-content/90 border-none px-6 py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-lg"
                             />
                             <Button
                                 text="Create Cards"
                                 onClick={() => navigate('/create')}
-                                className="bg-blue-600 text-white hover:bg-blue-700 border-none px-6 py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.5)]"
+                                className="bg-primary text-primary-content hover:bg-primary/90 border-none px-6 py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-blue-600/30"
                             />
                         </div>
                     </div>
