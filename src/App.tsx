@@ -11,7 +11,7 @@ const App = () => {
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-slate-950 flex flex-col items-start p-10 md:p-20 relative">
+        <div className="min-h-screen bg-slate-950 flex flex-col items-start px-10 md:px-20 pt-28 relative">
             <MainNavBar />
 
             <div className="mt-16 w-full">
@@ -27,10 +27,10 @@ const App = () => {
 
                 {/* Secțiunile cu ID-uri pentru scroll */}
                 <div className="space-y-32 mt-32">
-                    <div id="about">
+                    <div id="about" className="scroll-mt-32">
                         <About />
                     </div>
-                    <div id="how-it-works">
+                    <div id="how-it-works" className="scroll-mt-32">
                         <HowItWorks />
                     </div>
                 </div>
