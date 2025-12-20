@@ -1,46 +1,13 @@
-import { useState } from "react";
-import MainNavBar from "./components/MainNavBar.tsx";
-import Hero from "./components/Hero.tsx";
-import Button from "./components/Button.tsx";
-import LoginModal from "./components/LoginModal.tsx";
-import About from "./components/About.tsx"; // Import nou
-import HowItWorks from "./components/HowItWorks.tsx"; // Import nou
+import { Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import CreateFlashcards from "./pages/CreateFlashcards";
 
-// src/App.tsx
 const App = () => {
-    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-
     return (
-        <div className="min-h-screen bg-slate-950 flex flex-col items-start px-10 md:px-20 pt-28 relative">
-            <MainNavBar />
-
-            <div className="mt-16 w-full">
-                <Hero title="Your no1 study weapon" />
-
-                <div className="mt-4">
-                    <Button
-                        text="Get Started"
-                        onClick={() => setIsLoginModalOpen(true)}
-                        className="bg-white text-slate-950 hover:bg-slate-200 border-none px-6 py-2 text-xs font-black uppercase tracking-widest transition-all"
-                    />
-                </div>
-
-                {/* Secțiunile cu ID-uri pentru scroll */}
-                <div className="space-y-32 mt-32">
-                    <div id="about" className="scroll-mt-32">
-                        <About />
-                    </div>
-                    <div id="how-it-works" className="scroll-mt-32">
-                        <HowItWorks />
-                    </div>
-                </div>
-            </div>
-
-            <LoginModal
-                isOpen={isLoginModalOpen}
-                onClose={() => setIsLoginModalOpen(false)}
-            />
-        </div>
+        <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/create" element={<CreateFlashcards />} />
+        </Routes>
     );
 };
 

@@ -3,9 +3,9 @@ import { motion } from "framer-motion";
 
 const HowItWorks = () => {
     const steps = [
-        { id: "01", title: "Ingest", desc: "Încarcă materialele de studiu în sistem. Suportăm multiple formate de date." },
-        { id: "02", title: "Process", desc: "Algoritmul analizează textul și generează seturi optimizate de flashcards." },
-        { id: "03", title: "Execute", desc: "Sesiuni de studiu intensive bazate pe curba uitării (Ebbinghaus)." }
+        { id: "01", title: "Ingest", desc: "Upload study materials into the system. We support multiple data formats." },
+        { id: "02", title: "Process", desc: "Our algorithm analyzes the text and generates optimized sets of flashcards every single time." },
+        { id: "03", title: "Execute", desc: "Intensive study sessions based on the forgetting curve (Ebbinghaus)." }
     ];
 
     const containerVariants = {
@@ -23,7 +23,7 @@ const HowItWorks = () => {
 
     return (
         <section className="max-w-md text-left">
-            <h2 className="text-xs font-black text-blue-500 uppercase tracking-[0.3em] mb-12">
+            <h2 className="text-md font-black text-blue-500 uppercase tracking-[0.3em] mb-12">
                 // System Operations
             </h2>
 
