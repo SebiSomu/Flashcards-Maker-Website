@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react";
 
 const ThemeToggle = () => {
-    // Initialize state from local storage or system preference, default to dark
     const [theme, setTheme] = useState(
         localStorage.getItem("theme") ||
         (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
     );
 
-    // Apply theme on mount and change
     useEffect(() => {
         document.documentElement.setAttribute("data-theme", theme);
         localStorage.setItem("theme", theme);
 
-        // Toggle 'dark' class for Tailwind 'class' strategy
         if (theme === "dark") {
             document.documentElement.classList.add("dark");
         } else {
@@ -27,14 +24,14 @@ const ThemeToggle = () => {
     return (
         <button
             onClick={toggleTheme}
-            className="fixed top-24 right-6 md:top-28 md:right-10 z-50 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg flex items-center justify-center transition-all hover:bg-white/20 hover:scale-110 active:scale-95 group"
+            className="fixed top-16 right-6 md:top-20 md:right-10 z-50 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg flex items-center justify-center transition-all hover:bg-white/20 hover:scale-110 active:scale-95 group"
             aria-label="Toggle Theme"
         >
             {/* Sun Icon */}
             <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
+                width="21"
+                height="21"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -55,7 +52,6 @@ const ThemeToggle = () => {
                 <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
             </svg>
 
-            {/* Optional: Add a moon icon for light mode if desired, but user asked specifically for a sun on the button */}
         </button>
     );
 };
