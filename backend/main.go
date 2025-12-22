@@ -154,9 +154,10 @@ func main() {
 			return c.Status(404).JSON(fiber.Map{"error": "Flashcard not found or access denied"})
 		}
 
-		type UpdateData struct {
-			Front string `json:"front"`
-			Back  string `json:"back"`
+	type UpdateData struct {
+			Front    string `json:"front"`
+			Back     string `json:"back"`
+			FolderID *uint  `json:"folderId"`
 		}
 		var updateData UpdateData
 		if err := c.BodyParser(&updateData); err != nil {
@@ -165,6 +166,7 @@ func main() {
 
 		card.Front = updateData.Front
 		card.Back = updateData.Back
+		card.FolderID = updateData.FolderID
 		DB.Save(&card)
 
 		return c.JSON(card)
@@ -185,6 +187,58 @@ func main() {
 
 		DB.Delete(&card)
 		return c.Status(200).JSON(fiber.Map{"message": "Deleted successfully"})
+	})
+
+	// --- Folder API ---
+
+	app.Get("/api/folders", func(c *fiber.Ctx) error {
+		userID, err := getUserID(c)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+
+		var folders []Folder
+		if result := DB.Where("user_id = ?", userID).Find(&folders); result.Error != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Could not fetch folders"})
+		}
+		return c.JSON(folders)
+	})
+
+	app.Post("/api/folders", func(c *fiber.Ctx) error {
+		userID, err := getUserID(c)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+
+		folder := new(Folder)
+		if err := c.BodyParser(folder); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid data"})
+		}
+
+		folder.UserID = userID
+		if result := DB.Create(&folder); result.Error != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Could not create folder"})
+		}
+		return c.Status(201).JSON(folder)
+	})
+
+	app.Delete("/api/folders/:id", func(c *fiber.Ctx) error {
+		userID, err := getUserID(c)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+
+		id := c.Params("id")
+		var folder Folder
+		if result := DB.Where("id = ? AND user_id = ?", id, userID).First(&folder); result.Error != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "Folder not found or access denied"})
+		}
+
+		// Option B: Keep cards, set folder_id to null
+		DB.Model(&Flashcard{}).Where("folder_id = ?", folder.ID).Update("folder_id", nil)
+
+		DB.Delete(&folder)
+		return c.Status(200).JSON(fiber.Map{"message": "Folder deleted"})
 	})
 
 	log.Fatal(app.Listen(":8080"))

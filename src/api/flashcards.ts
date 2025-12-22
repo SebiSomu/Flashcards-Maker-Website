@@ -1,17 +1,30 @@
 import axios from "axios";
 
 const API_URL = "http://localhost:8080/api/flashcards";
+const FOLDER_API_URL = "http://localhost:8080/api/folders";
+
+export interface Folder {
+    ID: number;
+    name: string;
+    userId: number;
+}
 
 export interface Flashcard {
     ID: number;
     front: string;
     back: string;
     userId: number;
+    folderId?: number | null;
 }
 
 export interface CreateFlashcardDTO {
     front: string;
     back: string;
+    folderId?: number | null;
+}
+
+export interface CreateFolderDTO {
+    name: string;
 }
 
 export const fetchFlashcards = async (token: string): Promise<Flashcard[]> => {
@@ -37,6 +50,28 @@ export const updateFlashcard = async (token: string, id: number, card: CreateFla
 
 export const deleteFlashcard = async (token: string, id: number): Promise<void> => {
     await axios.delete(`${API_URL}/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+};
+
+// --- Folder API ---
+
+export const fetchFolders = async (token: string): Promise<Folder[]> => {
+    const response = await axios.get(FOLDER_API_URL, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
+export const createFolder = async (token: string, folder: CreateFolderDTO): Promise<Folder> => {
+    const response = await axios.post(FOLDER_API_URL, folder, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
+export const deleteFolder = async (token: string, id: number): Promise<void> => {
+    await axios.delete(`${FOLDER_API_URL}/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
     });
 };

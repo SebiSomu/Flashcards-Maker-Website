@@ -8,12 +8,13 @@ import EditMode from "../components/flashcards/EditMode";
 import QuizMode from "../components/flashcards/QuizMode";
 import { useAuthStore } from "../store/useAuthStore";
 import { useToast } from "../hooks/useToast";
-import { fetchFlashcards, createFlashcard, updateFlashcard, deleteFlashcard, type CreateFlashcardDTO, type Flashcard } from "../api/flashcards";
+import { fetchFlashcards, createFlashcard, updateFlashcard, deleteFlashcard, fetchFolders, createFolder, deleteFolder, type CreateFlashcardDTO, type Flashcard } from "../api/flashcards";
 
 interface BackendFlashcard {
     ID: number;
     front: string;
     back: string;
+    folderId?: number | null;
 }
 
 const CreateFlashcards = () => {
@@ -25,11 +26,36 @@ const CreateFlashcards = () => {
     const { showToast } = useToast();
     const queryClient = useQueryClient();
 
-    // Query: Fetch Flashcards
-    const { data: flashcards = [], isLoading } = useQuery({
+    // Queries
+    const { data: flashcards = [], isLoading: isLoadingCards } = useQuery({
         queryKey: ['flashcards'],
         queryFn: () => fetchFlashcards(token || ""),
-        enabled: !!token, // Only fetch if token exists
+        enabled: !!token,
+    });
+
+    const { data: folders = [] } = useQuery({
+        queryKey: ['folders'],
+        queryFn: () => fetchFolders(token || ""),
+        enabled: !!token,
+    });
+
+    // Mutations - Folders
+    const createFolderMutation = useMutation({
+        mutationFn: (name: string) => createFolder(token || "", { name }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['folders'] });
+            showToast("Folder Created!", 'success');
+        },
+        onError: () => showToast("Failed to create folder.", 'error')
+    });
+
+    const deleteFolderMutation = useMutation({
+        mutationFn: (id: number) => deleteFolder(token || "", id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['folders'] });
+            showToast("Folder Deleted!", 'info');
+        },
+        onError: () => showToast("Failed to delete folder.", 'error')
     });
 
     // Mutations
@@ -77,7 +103,7 @@ const CreateFlashcards = () => {
 
     // --- Data Actions ---
 
-    const handleCreateCard = (newCardData: { front: string; back: string }) => {
+    const handleCreateCard = (newCardData: { front: string; back: string; folderId?: number | null }) => {
         createMutation.mutate(newCardData);
     };
 
@@ -89,10 +115,12 @@ const CreateFlashcards = () => {
         deleteMutation.mutate(id);
     };
 
+    // Adapt flashcards for child components (no global filtering anymore)
     const adaptedFlashcards = flashcards.map((card: BackendFlashcard) => ({
         id: card.ID,
         front: card.front,
-        back: card.back
+        back: card.back,
+        folderId: card.folderId
     }));
 
     return (
@@ -104,7 +132,7 @@ const CreateFlashcards = () => {
                 <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-gradient-to-bl from-blue-900/10 to-transparent pointer-events-none z-0"></div>
                 <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-gradient-to-tr from-purple-900/10 to-transparent pointer-events-none z-0"></div>
 
-                {isLoading && (
+                {isLoadingCards && (
                     <div className="absolute inset-0 flex items-center justify-center bg-base-100/50 z-50">
                         <span className="loading loading-spinner loading-lg text-primary"></span>
                     </div>
@@ -126,6 +154,9 @@ const CreateFlashcards = () => {
                         flashcards={adaptedFlashcards}
                         onCreate={handleCreateCard}
                         onBack={handleBackToSelection}
+                        folders={folders}
+                        onCreateFolder={(name) => createFolderMutation.mutate(name)}
+                        onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
                     />
                 )}
 
@@ -135,12 +166,16 @@ const CreateFlashcards = () => {
                         onUpdate={handleUpdateCard}
                         onDelete={handleDeleteCard}
                         onBack={handleBackToSelection}
+                        folders={folders}
+                        onCreateFolder={(name) => createFolderMutation.mutate(name)}
+                        onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
                     />
                 )}
 
                 {mode === 'quiz' && (
                     <QuizMode
                         flashcards={adaptedFlashcards}
+                        folders={folders}
                         onBack={handleBackToSelection}
                     />
                 )}
@@ -151,3 +186,4 @@ const CreateFlashcards = () => {
 };
 
 export default CreateFlashcards;
+

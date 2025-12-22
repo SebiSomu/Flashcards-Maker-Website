@@ -24,15 +24,15 @@ const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModalProps)
     const navigate = useNavigate();
     const setAuth = useAuthStore((state) => state.setAuth);
 
-    // Reset state when modal opens
+    useEffect(() => {
+        setMode(defaultMode);
+    }, [defaultMode]);
+
     useEffect(() => {
         if (isOpen) {
             setErrorMessage(null);
-            if (mode !== defaultMode) {
-                setMode(defaultMode);
-            }
         }
-    }, [isOpen, defaultMode]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isOpen]);
 
     const loginMutation = useMutation<LoginResponse, Error, LoginCredentials>({
         mutationFn: async (credentials) => {

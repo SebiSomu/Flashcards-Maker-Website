@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import FlashcardSidebar from './FlashcardSidebar';
+import FolderList from './FolderList';
+import type { Folder } from "../../api/flashcards";
 
 interface Flashcard {
     id: number;
     front: string;
     back: string;
+    folderId?: number | null;
 }
 
 interface EditModeProps {
@@ -12,10 +15,14 @@ interface EditModeProps {
     onUpdate: (card: Flashcard) => void;
     onDelete: (id: number) => void;
     onBack: () => void;
+    folders: Folder[];
+    onCreateFolder: (name: string) => void;
+    onDeleteFolder: (id: number) => void;
 }
 
-const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onBack }) => {
+const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onBack, folders, onCreateFolder, onDeleteFolder }) => {
     const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
+    const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
     const [front, setFront] = useState("");
     const [back, setBack] = useState("");
 
@@ -48,15 +55,29 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
         handleClearForm();
     };
 
+    // Filter flashcards based on selected folder
+    const filteredFlashcards = flashcards.filter(card =>
+        selectedFolderId === null || card.folderId === selectedFolderId
+    );
+
     return (
         <div className="flex flex-1 w-full h-full relative z-10 overflow-hidden">
-            {/* Sidebar - Created Cards */}
+            {/* Unified Sidebar with Folders above Cards */}
             <FlashcardSidebar
-                flashcards={flashcards}
+                flashcards={filteredFlashcards}
                 selectedCardId={selectedCardId}
                 onCardClick={handleCardClick}
                 mode="edit"
                 onBack={onBack}
+                folderSection={
+                    <FolderList
+                        folders={folders}
+                        selectedFolderId={selectedFolderId}
+                        onSelectFolder={setSelectedFolderId}
+                        onCreateFolder={onCreateFolder}
+                        onDeleteFolder={onDeleteFolder}
+                    />
+                }
             />
 
             {/* Main Content - Edit Area */}
@@ -147,3 +168,4 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
 };
 
 export default EditMode;
+

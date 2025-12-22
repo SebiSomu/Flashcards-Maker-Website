@@ -14,9 +14,16 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
+type Folder struct {
+	gorm.Model
+	Name   string `json:"name"`
+	UserID uint   `json:"userId"`
+}
+
 type Flashcard struct {
 	gorm.Model
-	Front  string `json:"front"`
-	Back   string `json:"back"`
-	UserID uint   `json:"userId"`
+	Front    string `json:"front"`
+	Back     string `json:"back"`
+	UserID   uint   `json:"userId"`
+	FolderID *uint  `json:"folderId"` // Nullable pointer
 }
