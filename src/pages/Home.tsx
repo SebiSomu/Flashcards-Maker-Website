@@ -11,7 +11,13 @@ import Footer from "../components/Footer.tsx";
 
 const Home = () => {
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+    const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
     const navigate = useNavigate();
+
+    const handleOpenAuth = (mode: 'login' | 'register') => {
+        setAuthMode(mode);
+        setIsLoginModalOpen(true);
+    };
 
     return (
         <div className="min-h-screen bg-base-100 flex flex-col relative">
@@ -30,7 +36,7 @@ const Home = () => {
                         <div className="mt-8 flex gap-4">
                             <Button
                                 text="Get Started"
-                                onClick={() => setIsLoginModalOpen(true)}
+                                onClick={() => handleOpenAuth('register')}
                                 className="bg-base-content text-base-100 hover:bg-base-content/90 border-none px-6 py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-lg"
                             />
                             <Button
@@ -62,6 +68,7 @@ const Home = () => {
             <LoginModal
                 isOpen={isLoginModalOpen}
                 onClose={() => setIsLoginModalOpen(false)}
+                defaultMode={authMode}
             />
             <Footer />
         </div >
