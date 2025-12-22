@@ -1,14 +1,14 @@
 import React from 'react';
 
 interface Flashcard {
-    id: string;
+    id: number;
     front: string;
     back: string;
 }
 
 interface FlashcardSidebarProps {
     flashcards: Flashcard[];
-    selectedCardId: string | null;
+    selectedCardId: number | null;
     onCardClick: (card: Flashcard) => void;
     mode: 'create' | 'edit';
     onBack: () => void;

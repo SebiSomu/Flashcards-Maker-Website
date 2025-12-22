@@ -16,7 +16,7 @@ func ConnectDatabase() {
 		panic("Failed to connect to database!")
 	}
 	
-	err = database.AutoMigrate(&User{})
+	err = database.AutoMigrate(&User{}, &Flashcard{})
 	if err != nil {
 		fmt.Println("Migration error:", err)
 	}

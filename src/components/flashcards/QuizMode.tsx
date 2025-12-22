@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 interface Flashcard {
-    id: string;
+    id: number;
     front: string;
     back: string;
 }

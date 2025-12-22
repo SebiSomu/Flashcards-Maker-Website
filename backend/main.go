@@ -74,5 +74,118 @@ func main() {
 		})
 	})
 
+	// --- Flashcards API ---
+
+	// Middleware/Helper to get User ID from Token
+	getUserID := func(c *fiber.Ctx) (uint, error) {
+		authHeader := c.Get("Authorization")
+		if authHeader == "" || len(authHeader) < 7 || authHeader[:7] != "Bearer " {
+			return 0, fiber.NewError(fiber.StatusUnauthorized, "Missing or malformed token")
+		}
+		tokenString := authHeader[7:]
+
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fiber.NewError(fiber.StatusUnauthorized, "Unexpected signing method")
+			}
+			return []byte("secret"), nil
+		})
+
+		if err != nil || !token.Valid {
+			return 0, fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			return 0, fiber.NewError(fiber.StatusUnauthorized, "Invalid token claims")
+		}
+
+		sub, ok := claims["sub"].(float64)
+		if !ok {
+			return 0, fiber.NewError(fiber.StatusUnauthorized, "Invalid user ID in token")
+		}
+
+		return uint(sub), nil
+	}
+
+	app.Get("/api/flashcards", func(c *fiber.Ctx) error {
+		userID, err := getUserID(c)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+
+		var flashcards []Flashcard
+		if result := DB.Where("user_id = ?", userID).Find(&flashcards); result.Error != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Could not fetch flashcards"})
+		}
+
+		return c.JSON(flashcards)
+	})
+
+	app.Post("/api/flashcards", func(c *fiber.Ctx) error {
+		userID, err := getUserID(c)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+
+		card := new(Flashcard)
+		if err := c.BodyParser(card); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid data"})
+		}
+
+		card.UserID = userID
+		if result := DB.Create(&card); result.Error != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Could not create flashcard"})
+		}
+
+		return c.Status(201).JSON(card)
+	})
+
+	app.Put("/api/flashcards/:id", func(c *fiber.Ctx) error {
+		userID, err := getUserID(c)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+
+		id := c.Params("id")
+		var card Flashcard
+
+		if result := DB.Where("id = ? AND user_id = ?", id, userID).First(&card); result.Error != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "Flashcard not found or access denied"})
+		}
+
+		type UpdateData struct {
+			Front string `json:"front"`
+			Back  string `json:"back"`
+		}
+		var updateData UpdateData
+		if err := c.BodyParser(&updateData); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid data"})
+		}
+
+		card.Front = updateData.Front
+		card.Back = updateData.Back
+		DB.Save(&card)
+
+		return c.JSON(card)
+	})
+
+	app.Delete("/api/flashcards/:id", func(c *fiber.Ctx) error {
+		userID, err := getUserID(c)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+
+		id := c.Params("id")
+		var card Flashcard
+
+		if result := DB.Where("id = ? AND user_id = ?", id, userID).First(&card); result.Error != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "Flashcard not found or access denied"})
+		}
+
+		DB.Delete(&card)
+		return c.Status(200).JSON(fiber.Map{"message": "Deleted successfully"})
+	})
+
 	log.Fatal(app.Listen(":8080"))
 }

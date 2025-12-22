@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import CreateFlashcards from "./pages/CreateFlashcards";
 import ThemeToggle from "./components/ThemeToggle";
 
+
 const App = () => {
     return (
         <>

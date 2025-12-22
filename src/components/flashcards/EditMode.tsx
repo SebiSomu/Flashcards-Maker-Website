@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import FlashcardSidebar from './FlashcardSidebar';
 
 interface Flashcard {
-    id: string;
+    id: number;
     front: string;
     back: string;
 }
@@ -10,12 +10,12 @@ interface Flashcard {
 interface EditModeProps {
     flashcards: Flashcard[];
     onUpdate: (card: Flashcard) => void;
-    onDelete: (id: string) => void;
+    onDelete: (id: number) => void;
     onBack: () => void;
 }
 
 const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onBack }) => {
-    const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+    const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
     const [front, setFront] = useState("");
     const [back, setBack] = useState("");
 

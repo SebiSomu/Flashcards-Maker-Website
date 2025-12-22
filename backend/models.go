@@ -8,7 +8,15 @@ type User struct {
 	Password string `gorm:"not null" json:"password"`
 }
 
+
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type Flashcard struct {
+	gorm.Model
+	Front  string `json:"front"`
+	Back   string `json:"back"`
+	UserID uint   `json:"userId"`
 }

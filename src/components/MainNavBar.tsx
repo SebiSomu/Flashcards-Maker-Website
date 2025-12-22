@@ -16,6 +16,12 @@ const MainNavBar = () => {
                 {isHome && (
                     <>
                         <a
+                            href="#features"
+                            className="text-base-content/60 hover:text-base-content text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300"
+                        >
+                            Features
+                        </a>
+                        <a
                             href="#about"
                             className="text-base-content/60 hover:text-base-content text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300"
                         >

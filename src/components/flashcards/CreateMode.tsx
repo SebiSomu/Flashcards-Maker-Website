@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import FlashcardSidebar from './FlashcardSidebar';
 
 interface Flashcard {
-    id: string;
+    id: number;
     front: string;
     back: string;
 }
 
 interface CreateModeProps {
     flashcards: Flashcard[];
-    onCreate: (card: Flashcard) => void;
+    onCreate: (card: { front: string; back: string }) => void;
     onBack: () => void;
 }
 
@@ -25,12 +25,10 @@ const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack })
     const handleSave = () => {
         if (!front.trim() || !back.trim()) return;
 
-        const newCard: Flashcard = {
-            id: Date.now().toString(),
+        onCreate({
             front,
             back
-        };
-        onCreate(newCard);
+        });
         handleClearForm();
     };
 
@@ -54,7 +52,7 @@ const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack })
                                 <h2 className="text-2xl text-base-content font-black">
                                     Create New Flashcard
                                 </h2>
-                                <div className="badge badge-outline text-xs font-bold uppercase tracking-widest p-3 badge-accent">
+                                <div className="badge badge-outline text-xs font-bold uppercase tracking-widest p-3 badge-accent whitespace-nowrap">
                                     Creation Mode
                                 </div>
                             </div>
@@ -69,7 +67,8 @@ const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack })
                                         className="input input-bordered w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none h-14"
                                         value={front}
                                         onChange={(e) => setFront(e.target.value)}
-                                        placeholder="e.g. What is React?"
+                                        placeholder="What is React?"
+                                        autoComplete="off"
                                     />
                                 </div>
 
@@ -81,7 +80,8 @@ const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack })
                                         className="textarea textarea-bordered h-32 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-base leading-relaxed"
                                         value={back}
                                         onChange={(e) => setBack(e.target.value)}
-                                        placeholder="e.g. A JavaScript library..."
+                                        placeholder="A JavaScript library..."
+                                        autoComplete="off"
                                     ></textarea>
                                 </div>
                             </div>

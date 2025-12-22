@@ -1,22 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MainNavBar from "../components/MainNavBar.tsx";
 import Hero from "../components/Hero.tsx";
 import Button from "../components/Button.tsx";
-import LoginModal from "../components/LoginModal.tsx";
+import AuthModal from "../components/AuthModal.tsx";
 import About from "../components/About.tsx";
 import HowItWorks from "../components/HowItWorks.tsx";
 import FlashcardAnimation from "../components/FlashcardAnimation.tsx";
+import FeaturesSection from "../components/FeaturesSection.tsx";
 import Footer from "../components/Footer.tsx";
+import { useAuthStore } from "../store/useAuthStore";
 
 const Home = () => {
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+
+    const { token } = useAuthStore();
     const navigate = useNavigate();
 
-    const handleOpenAuth = (mode: 'login' | 'register') => {
-        setAuthMode(mode);
-        setIsLoginModalOpen(true);
+    // Check for session on mount
+    useEffect(() => {
+        if (token) {
+            navigate('/create');
+        }
+    }, [token, navigate]);
+
+    const handleGetStarted = (mode: 'login' | 'register') => {
+        if (token) {
+            navigate('/create');
+        } else {
+            setAuthMode(mode);
+            setIsLoginModalOpen(true);
+        }
     };
 
     return (
@@ -33,16 +48,11 @@ const Home = () => {
                             Master any subject with our intelligent flashcard system. Create, organize, and study faster than ever before.
                         </p>
 
-                        <div className="mt-8 flex gap-4">
+                        <div className="mt-8 flex justify-start gap-4">
                             <Button
                                 text="Get Started"
-                                onClick={() => handleOpenAuth('register')}
-                                className="bg-base-content text-base-100 hover:bg-base-content/90 border-none px-6 py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-lg"
-                            />
-                            <Button
-                                text="Create Cards"
-                                onClick={() => navigate('/create')}
-                                className="bg-primary text-primary-content hover:bg-primary/90 border-none px-6 py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-blue-600/30"
+                                onClick={() => handleGetStarted('register')}
+                                className="bg-base-content text-base-100 hover:bg-base-content/90 border-none px-8 py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-lg hover:scale-105 active:scale-95"
                             />
                         </div>
                     </div>
@@ -55,6 +65,9 @@ const Home = () => {
                 </div>
 
                 <div className="space-y-32 mt-32 w-full">
+                    <div id="features">
+                        <FeaturesSection />
+                    </div>
                     <div id="about" className="scroll-mt-32">
                         <About />
                     </div>
@@ -65,7 +78,7 @@ const Home = () => {
             </div>
 
 
-            <LoginModal
+            <AuthModal
                 isOpen={isLoginModalOpen}
                 onClose={() => setIsLoginModalOpen(false)}
                 defaultMode={authMode}
