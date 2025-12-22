@@ -36,7 +36,7 @@ const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModalProps)
 
     const loginMutation = useMutation<LoginResponse, Error, LoginCredentials>({
         mutationFn: async (credentials) => {
-            const response = await axios.post<LoginResponse>("http://localhost:8080/login", credentials);
+            const response = await axios.post<LoginResponse>("http://localhost:8080/api/login", credentials);
             return response.data;
         },
         onSuccess: (data) => {

@@ -17,9 +17,10 @@ interface CreateModeProps {
     folders: Folder[];
     onCreateFolder: (name: string) => void;
     onDeleteFolder: (id: number) => void;
+    onDelete: (id: number) => void;
 }
 
-const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack, folders, onCreateFolder, onDeleteFolder }) => {
+const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack, folders, onCreateFolder, onDeleteFolder, onDelete }) => {
     const [front, setFront] = useState("");
     const [back, setBack] = useState("");
     const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
@@ -54,6 +55,7 @@ const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack, f
                 onCardClick={() => { }} // No-op for Create Mode
                 mode="create"
                 onBack={onBack}
+                onDeleteCard={onDelete}
                 folderSection={
                     <FolderList
                         folders={folders}

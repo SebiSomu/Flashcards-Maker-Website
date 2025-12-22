@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Folder } from "../../api/flashcards";
+import ConfirmModal from "../ConfirmModal";
 
 interface FolderListProps {
     folders: Folder[];
@@ -15,6 +16,7 @@ const FolderList = ({ folders, onSelectFolder, onCreateFolder, onDeleteFolder, s
     const [isCreating, setIsCreating] = useState(false);
     const [newFolderName, setNewFolderName] = useState("");
     const [isExpanded, setIsExpanded] = useState(false);
+    const [folderToDelete, setFolderToDelete] = useState<number | null>(null);
 
     const handleCreate = () => {
         if (newFolderName.trim()) {
@@ -53,7 +55,7 @@ const FolderList = ({ folders, onSelectFolder, onCreateFolder, onDeleteFolder, s
                             {folder.name}
                         </button>
                         <button
-                            onClick={() => onDeleteFolder(folder.ID)}
+                            onClick={() => setFolderToDelete(folder.ID)}
                             className="btn btn-ghost btn-xs btn-square text-error opacity-0 group-hover:opacity-100 transition-opacity"
                             title="Delete Folder"
                         >
@@ -98,6 +100,20 @@ const FolderList = ({ folders, onSelectFolder, onCreateFolder, onDeleteFolder, s
                     + New Folder
                 </button>
             )}
+
+            {/* Folder Deletion Confirmation Modal */}
+            <ConfirmModal
+                isOpen={folderToDelete !== null}
+                onClose={() => setFolderToDelete(null)}
+                onConfirm={() => {
+                    if (folderToDelete !== null) {
+                        onDeleteFolder(folderToDelete);
+                    }
+                }}
+                title="Delete Folder?"
+                message="Deleting this folder will also unassign all its cards. This action is permanent. Do you wish to proceed?"
+                confirmText="Delete Folder"
+            />
         </div>
     );
 };

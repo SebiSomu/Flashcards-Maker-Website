@@ -69,6 +69,7 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
                 onCardClick={handleCardClick}
                 mode="edit"
                 onBack={onBack}
+                onDeleteCard={onDelete}
                 folderSection={
                     <FolderList
                         folders={folders}

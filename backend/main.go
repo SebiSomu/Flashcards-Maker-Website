@@ -21,31 +21,49 @@ func main() {
 	})
 
 	app.Post("/api/register", func(c *fiber.Ctx) error {
-		user := new(User)
+		var req RegisterRequest
 
-		if err := c.BodyParser(user); err != nil {
+		if err := c.BodyParser(&req); err != nil {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid request payload"})
 		}
 
-		hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+		// Hash the password
+		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Could not hash password"})
 		}
-		user.Password = string(hash)
+
+		// Create user with hashed password
+		user := User{
+			Email:    req.Email,
+			Password: string(hash),
+		}
 
 		if result := DB.Create(&user); result.Error != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Registration failed: email already exists or server error"})
 		}
 
+		// Generate JWT token
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"sub": user.ID,
+			"exp": time.Now().Add(time.Hour * 24).Unix(),
+		})
+
+		t, err := token.SignedString([]byte("secret"))
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Could not generate token"})
+		}
+
 		return c.Status(201).JSON(fiber.Map{
 			"message": "User successfully registered",
-			"userId":  user.ID,
+			"token":   t,
+			"user":    user.ToResponse(),
 		})
 	})
 
-	app.Post("/login", func(c *fiber.Ctx) error {
-		req := new(LoginRequest)
-		if err := c.BodyParser(req); err != nil {
+	app.Post("/api/login", func(c *fiber.Ctx) error {
+		var req LoginRequest
+		if err := c.BodyParser(&req); err != nil {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid request payload"})
 		}
 
@@ -54,10 +72,12 @@ func main() {
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 		}
 
+		// Compare hashed password
 		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 		}
 
+		// Generate JWT token
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"sub": user.ID,
 			"exp": time.Now().Add(time.Hour * 24).Unix(),
@@ -70,7 +90,7 @@ func main() {
 
 		return c.JSON(fiber.Map{
 			"token": t,
-			"user":  user,
+			"user":  user.ToResponse(), // Returns user without password
 		})
 	})
 
@@ -154,7 +174,7 @@ func main() {
 			return c.Status(404).JSON(fiber.Map{"error": "Flashcard not found or access denied"})
 		}
 
-	type UpdateData struct {
+		type UpdateData struct {
 			Front    string `json:"front"`
 			Back     string `json:"back"`
 			FolderID *uint  `json:"folderId"`
@@ -185,7 +205,7 @@ func main() {
 			return c.Status(404).JSON(fiber.Map{"error": "Flashcard not found or access denied"})
 		}
 
-		DB.Delete(&card)
+		DB.Unscoped().Delete(&card)
 		return c.Status(200).JSON(fiber.Map{"message": "Deleted successfully"})
 	})
 
@@ -234,10 +254,10 @@ func main() {
 			return c.Status(404).JSON(fiber.Map{"error": "Folder not found or access denied"})
 		}
 
-		// Option B: Keep cards, set folder_id to null
+		// Set flashcard folder_id to null for cards in this folder
 		DB.Model(&Flashcard{}).Where("folder_id = ?", folder.ID).Update("folder_id", nil)
 
-		DB.Delete(&folder)
+		DB.Unscoped().Delete(&folder)
 		return c.Status(200).JSON(fiber.Map{"message": "Folder deleted"})
 	})
 

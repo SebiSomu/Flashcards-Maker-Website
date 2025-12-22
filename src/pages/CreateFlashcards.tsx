@@ -157,6 +157,7 @@ const CreateFlashcards = () => {
                         folders={folders}
                         onCreateFolder={(name) => createFolderMutation.mutate(name)}
                         onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
+                        onDelete={handleDeleteCard}
                     />
                 )}
 
