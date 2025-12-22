@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -10,7 +9,9 @@ import (
 var DB *gorm.DB
 
 func ConnectDatabase() {
-	database, err := gorm.Open(sqlite.Open("flashcraft.db"), &gorm.Config{})
+	database, err := gorm.Open(sqlite.Open("flashcraft.db"), &gorm.Config{
+		PrepareStmt: true,
+	})
 
 	if err != nil {
 		fmt.Println("Connection error:", err)
