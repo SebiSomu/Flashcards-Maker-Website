@@ -56,6 +56,7 @@ const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack, f
                 mode="create"
                 onBack={onBack}
                 onDeleteCard={onDelete}
+                folders={folders}
                 folderSection={
                     <FolderList
                         folders={folders}
@@ -103,13 +104,12 @@ const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack, f
                                     <label className="label">
                                         <span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Front Side (Question)</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        className="input input-bordered w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none h-14"
+                                    <textarea
+                                        className="textarea textarea-bordered h-20 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-base h-14"
                                         value={front}
                                         onChange={(e) => setFront(e.target.value)}
                                         autoComplete="off"
-                                    />
+                                    ></textarea>
                                 </div>
 
                                 <div className="form-control w-full">

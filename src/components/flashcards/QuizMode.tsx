@@ -247,7 +247,7 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                                     <div className="mb-6">
                                         <span className="badge badge-primary badge-lg uppercase tracking-widest font-bold px-4 py-3">Question</span>
                                     </div>
-                                    <h3 className="text-2xl md:text-4xl text-center font-bold text-base-content leading-tight">
+                                    <h3 className="text-2xl md:text-3xl text-center font-bold text-base-content leading-tight whitespace-pre-wrap">
                                         {quizCards[currentCardIndex].front}
                                     </h3>
                                     <p className="absolute bottom-8 text-base-content/30 text-xs font-semibold uppercase tracking-widest animate-pulse">Click to Reveal Answer</p>
@@ -261,7 +261,7 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                                     <div className="mb-6">
                                         <span className="badge badge-secondary badge-lg uppercase tracking-widest font-bold px-4 py-3">Answer</span>
                                     </div>
-                                    <p className="text-xl md:text-3xl text-center font-medium text-base-content/90 leading-relaxed max-w-2xl">
+                                    <p className="text-xl md:text-2xl text-center font-medium text-base-content/90 leading-relaxed max-w-2xl whitespace-pre-wrap">
                                         {quizCards[currentCardIndex].back}
                                     </p>
                                 </div>

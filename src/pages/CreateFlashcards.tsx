@@ -71,7 +71,7 @@ const CreateFlashcards = () => {
     });
 
     const updateMutation = useMutation({
-        mutationFn: (card: Flashcard) => updateFlashcard(token || "", card.ID, { front: card.front, back: card.back }),
+        mutationFn: (card: Flashcard) => updateFlashcard(token || "", card.ID, { front: card.front, back: card.back, folderId: card.folderId }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['flashcards'] });
             showToast("Card Updated Successfully!", 'success');
@@ -107,7 +107,7 @@ const CreateFlashcards = () => {
         createMutation.mutate(newCardData);
     };
 
-    const handleUpdateCard = (updatedCard: { id: number; front: string; back: string }) => {
+    const handleUpdateCard = (updatedCard: { id: number; front: string; back: string; folderId?: number | null }) => {
         updateMutation.mutate({ ...updatedCard, ID: updatedCard.id, userId: 0 } as Flashcard);
     };
 

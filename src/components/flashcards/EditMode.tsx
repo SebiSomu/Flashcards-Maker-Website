@@ -12,7 +12,7 @@ interface Flashcard {
 
 interface EditModeProps {
     flashcards: Flashcard[];
-    onUpdate: (card: Flashcard) => void;
+    onUpdate: (card: { id: number; front: string; back: string; folderId?: number | null }) => void;
     onDelete: (id: number) => void;
     onBack: () => void;
     folders: Folder[];
@@ -23,6 +23,7 @@ interface EditModeProps {
 const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onBack, folders, onCreateFolder, onDeleteFolder }) => {
     const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
     const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
+    const [editFolderId, setEditFolderId] = useState<number | null>(null);
     const [front, setFront] = useState("");
     const [back, setBack] = useState("");
 
@@ -30,23 +31,25 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
         setFront(card.front);
         setBack(card.back);
         setSelectedCardId(card.id);
+        setEditFolderId(card.folderId || null);
     };
 
     const handleClearForm = () => {
         setFront("");
         setBack("");
         setSelectedCardId(null);
+        setEditFolderId(null);
     };
 
     const handleSave = () => {
         if (!front.trim() || !back.trim() || !selectedCardId) return;
 
-        const updatedCard: Flashcard = {
+        onUpdate({
             id: selectedCardId,
             front,
-            back
-        };
-        onUpdate(updatedCard);
+            back,
+            folderId: editFolderId
+        });
     };
 
     const handleDelete = () => {
@@ -70,6 +73,7 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
                 mode="edit"
                 onBack={onBack}
                 onDeleteCard={onDelete}
+                folders={folders}
                 folderSection={
                     <FolderList
                         folders={folders}
@@ -109,17 +113,33 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
                                 </div>
 
                                 <div className="space-y-6">
+                                    {/* Folder Selection */}
+                                    <div className="form-control w-full">
+                                        <label className="label">
+                                            <span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Folder</span>
+                                        </label>
+                                        <select
+                                            className="select select-bordered w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none"
+                                            value={editFolderId || ""}
+                                            onChange={(e) => setEditFolderId(e.target.value ? Number(e.target.value) : null)}
+                                        >
+                                            <option value="">(Uncategorized)</option>
+                                            {folders.map(folder => (
+                                                <option key={folder.ID} value={folder.ID}>{folder.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
                                     <div className="form-control w-full">
                                         <label className="label">
                                             <span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Front Side (Question)</span>
                                         </label>
-                                        <input
-                                            type="text"
-                                            className="input input-bordered w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none h-14"
+                                        <textarea
+                                            className="textarea textarea-bordered h-20 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-base h-14"
                                             value={front}
                                             onChange={(e) => setFront(e.target.value)}
                                             placeholder="e.g. What is React?"
-                                        />
+                                        ></textarea>
                                     </div>
 
                                     <div className="form-control w-full">

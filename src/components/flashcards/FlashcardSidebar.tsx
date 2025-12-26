@@ -16,6 +16,7 @@ interface FlashcardSidebarProps {
     onBack: () => void;
     onDeleteCard?: (id: number) => void;
     folderSection?: React.ReactNode;
+    folders?: { ID: number; name: string }[];
 }
 
 const INITIAL_DISPLAY_COUNT = 4;
@@ -27,7 +28,8 @@ const FlashcardSidebar = ({
     mode,
     onBack,
     onDeleteCard,
-    folderSection
+    folderSection,
+    folders
 }: FlashcardSidebarProps) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [cardToDelete, setCardToDelete] = useState<number | null>(null);
@@ -84,8 +86,15 @@ const FlashcardSidebar = ({
                                 }`}></div>
                             <div className="flex justify-between items-start gap-2">
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="text-base-content font-bold text-xs truncate mb-0.5 pointer-events-none">{card.front}</h3>
-                                    <p className="text-base-content/70 text-xs truncate pointer-events-none">{card.back}</p>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <h3 className="text-base-content font-bold text-xs pointer-events-none whitespace-pre-wrap line-clamp-2">{card.front}</h3>
+                                        {card.folderId && folders && (
+                                            <span className="badge badge-ghost badge-outline text-[10px] h-4 leading-none px-1.5 opacity-60 shrink-0">
+                                                {folders.find(f => f.ID === card.folderId)?.name || 'Folder'}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-base-content/70 text-xs pointer-events-none whitespace-pre-wrap line-clamp-3">{card.back}</p>
                                 </div>
                                 {onDeleteCard && (
                                     <button
