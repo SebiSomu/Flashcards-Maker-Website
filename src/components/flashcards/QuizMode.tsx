@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { updateFlashcard } from "../../api/flashcards";
 import { type Folder, type Flashcard, type CreateFlashcardDTO } from "../../api/flashcards";
@@ -13,6 +13,34 @@ interface QuizModeProps {
     folders: Folder[];
     onBack: () => void;
 }
+
+// Mutat în afara componentei pentru a nu fi recreat la fiecare render
+const cardAnimation = {
+    initial: (dir: number) => ({
+        x: dir > 0 ? 80 : -80,
+        opacity: 0,
+        scale: 0.98,
+    }),
+    animate: {
+        x: 0,
+        opacity: 1,
+        scale: 1,
+        transition: {
+            type: "tween" as const,
+            duration: 0.22,
+            ease: "easeOut" as const,
+        }
+    },
+    exit: (dir: number) => ({
+        x: dir > 0 ? -80 : 80,
+        opacity: 0,
+        scale: 0.98,
+        transition: {
+            duration: 0.18,
+            ease: "easeInOut" as const
+        }
+    })
+};
 
 const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
     const [quizStarted, setQuizStarted] = useState(false);
@@ -103,8 +131,10 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
         setQuizStarted(true);
     };
 
-    const handleRate = (rating: number) => {
+    const handleRate = useCallback((rating: number) => {
         const currentCard = quizCards[currentCardIndex];
+        if (!currentCard) return;
+
         const sm2Result = calculateSM2(
             rating,
             currentCard.interval || 0,
@@ -154,8 +184,9 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
         setDirection(1);
 
         setTimeout(() => {
+            setRepetitionQueue(updatedQueue);
+
             if (currentCardIndex < quizCards.length - 1) {
-                setRepetitionQueue(updatedQueue);
                 setCurrentCardIndex(prev => prev + 1);
             } else {
                 if (updatedQueue.length > 0) {
@@ -168,31 +199,36 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                 }
             }
         }, 150);
-    };
+    }, [currentCardIndex, isFirstPass, quizCards, repetitionQueue, updateSM2Mutation]);
 
-    const handleNextCard = () => {
+    const handleNextCard = useCallback(() => {
         setDirection(1);
         setIsFlipped(false);
 
         setTimeout(() => {
-            if (currentCardIndex < quizCards.length - 1) {
-                setCurrentCardIndex(prev => prev + 1);
-            } else if (!isFirstPass) {
-                setQuizComplete(true);
-            }
+            setCurrentCardIndex(prev => {
+                if (prev < quizCards.length - 1) {
+                    return prev + 1;
+                } else if (!isFirstPass) {
+                    setQuizComplete(true);
+                }
+                return prev;
+            });
         }, 150);
-    };
+    }, [quizCards.length, isFirstPass]);
 
-    const handlePrevCard = () => {
+    const handlePrevCard = useCallback(() => {
         setDirection(-1);
         setIsFlipped(false);
 
         setTimeout(() => {
-            if (currentCardIndex > 0) {
-                setCurrentCardIndex(prev => prev - 1);
-            }
+            setCurrentCardIndex(prev => (prev > 0 ? prev - 1 : prev));
         }, 150);
-    };
+    }, []);
+
+    const handleFlip = useCallback(() => {
+        setIsFlipped(prev => !prev);
+    }, []);
 
     const dueCards = useMemo(() => {
         const now = new Date();
@@ -203,7 +239,11 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
         );
     }, [flashcards]);
 
-    const dueFolderNames = [...new Set(dueCards.map(c => folders.find(f => f.ID === c.folderId)?.name).filter(Boolean))];
+    const dueFolderNames = [...new Set(
+        dueCards
+            .map(c => folders.find(f => f.ID === c.folderId)?.name)
+            .filter(Boolean)
+    )];
 
     if (!quizStarted) {
         return (
@@ -268,11 +308,13 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                                 transition={{ delay: 0.4 }}
                                 className="flex flex-col gap-4"
                             >
-                                <span className="text-xs font-bold uppercase tracking-widest text-base-content/30 text-center">Or Start a New Practice Session</span>
+                                <span className="text-xs font-bold uppercase tracking-widest text-base-content/30 text-center">
+                                    Or Start a New Practice Session
+                                </span>
                                 <p className="text-xs text-center text-base-content/50 px-4 leading-relaxed">
-                                    Select folders to practice.<br/>
-                                    <strong>Rating System:</strong><br/>
-                                    1-2 Stars (0 reps) • 3 Stars (1 rep)<br/>
+                                    Select folders to practice.<br />
+                                    <strong>Rating System:</strong><br />
+                                    1-2 Stars (0 reps) • 3 Stars (1 rep)<br />
                                     4 Stars (2 reps) • 5 Stars (3 reps)
                                 </p>
 
@@ -282,14 +324,32 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                                     transition={{ delay: 0.5 }}
                                     className="space-y-2 mb-6 max-h-48 overflow-y-auto pr-2 custom-scrollbar"
                                 >
-                                    <span className="text-xs font-bold uppercase tracking-widest text-base-content/50 block mb-2">Select Folders (Optional)</span>
+                                    <span className="text-xs font-bold uppercase tracking-widest text-base-content/50 block mb-2">
+                                        Select Folders (Optional)
+                                    </span>
                                     {folders.map(folder => (
-                                        <label key={folder.ID} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedFolderIds.includes(folder.ID) ? 'bg-base-100 border-primary/50 text-primary' : 'bg-base-100/50 border-base-content/10 opacity-70'}`}>
-                                            <input type="checkbox" className="checkbox checkbox-primary checkbox-sm" checked={selectedFolderIds.includes(folder.ID)} onChange={() => toggleFolder(folder.ID)} />
+                                        <label
+                                            key={folder.ID}
+                                            className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                                                selectedFolderIds.includes(folder.ID)
+                                                    ? 'bg-base-100 border-primary/50 text-primary'
+                                                    : 'bg-base-100/50 border-base-content/10 opacity-70'
+                                            }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                className="checkbox checkbox-primary checkbox-sm"
+                                                checked={selectedFolderIds.includes(folder.ID)}
+                                                onChange={() => toggleFolder(folder.ID)}
+                                            />
                                             <span className="font-medium">{folder.name}</span>
                                         </label>
                                     ))}
-                                    {folders.length === 0 && <p className="text-base-content/40 text-sm italic">No folders. All cards will be included.</p>}
+                                    {folders.length === 0 && (
+                                        <p className="text-base-content/40 text-sm italic">
+                                            No folders. All cards will be included.
+                                        </p>
+                                    )}
                                 </motion.div>
 
                                 <motion.button
@@ -376,37 +436,6 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
 
     if (quizCards.length === 0) return null;
 
-    const cardAnimation = {
-        initial: (dir: number) => ({
-            x: dir > 0 ? 100 : -100,
-            opacity: 0,
-            scale: 0.95,
-            rotateY: dir > 0 ? 10 : -10,
-        }),
-        animate: {
-            x: 0,
-            opacity: 1,
-            scale: 1,
-            rotateY: 0,
-            transition: {
-                type: "spring" as const,
-                stiffness: 300,
-                damping: 25,
-                mass: 0.8
-            }
-        },
-        exit: (dir: number) => ({
-            x: dir > 0 ? -100 : 100,
-            opacity: 0,
-            scale: 0.95,
-            rotateY: dir > 0 ? -10 : 10,
-            transition: {
-                duration: 0.2,
-                ease: "easeInOut" as const
-            }
-        })
-    };
-
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -414,17 +443,18 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
             exit={{ opacity: 0 }}
             className="flex-1 flex flex-col w-full h-full relative z-10 bg-base-100 text-base-content"
         >
-            {/* Animated gradient background */}
+            {/* Animated gradient background - simplificat */}
             <motion.div
-                animate={{
-                    background: [
+                style={{
+                    backgroundImage:
                         'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(168, 85, 247, 0.05) 50%, rgba(37, 99, 235, 0.05) 100%)',
-                        'linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(37, 99, 235, 0.05) 50%, rgba(168, 85, 247, 0.05) 100%)',
-                        'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(168, 85, 247, 0.05) 50%, rgba(37, 99, 235, 0.05) 100%)'
-                    ]
+                    backgroundSize: '200% 200%',
                 }}
-                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 bg-[size:200%_200%] opacity-30 pointer-events-none z-0"
+                animate={{
+                    backgroundPosition: ['0% 0%', '100% 100%'],
+                }}
+                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 opacity-30 pointer-events-none z-0"
             />
 
             <div className="w-full h-20 border-b border-base-content/10 flex items-center justify-between px-8 bg-base-100/80 backdrop-blur-sm z-30">
@@ -453,12 +483,17 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                         animate="animate"
                         exit="exit"
                         className="w-full max-w-3xl"
+                        style={{ willChange: 'transform, opacity' }}
                     >
                         <QuizCard
                             card={quizCards[currentCardIndex]}
-                            folderName={quizCards[currentCardIndex].folderId ? folders.find(f => f.ID === quizCards[currentCardIndex].folderId)?.name : undefined}
+                            folderName={
+                                quizCards[currentCardIndex].folderId
+                                    ? folders.find(f => f.ID === quizCards[currentCardIndex].folderId)?.name
+                                    : undefined
+                            }
                             isFlipped={isFlipped}
-                            onFlip={() => setIsFlipped(!isFlipped)}
+                            onFlip={handleFlip}
                             isFirstPass={isFirstPass}
                             onRate={handleRate}
                             onNextCard={handleNextCard}
@@ -486,23 +521,27 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                     </svg>
                 </motion.button>
 
-                <div className="flex gap-1">
+                {/* Bara de progres optimizată: doar indicatorul curent este animat */}
+                <div className="relative flex items-center gap-1 overflow-hidden">
                     {quizCards.map((_, idx) => (
-                        <motion.div
+                        <div
                             key={idx}
-                            className={`h-1 rounded-full ${idx === currentCardIndex ? 'w-8 bg-primary' : 'w-1 bg-base-content/10'}`}
-                            initial={{ width: idx === currentCardIndex ? '8px' : '4px' }}
-                            animate={{
-                                width: idx === currentCardIndex ? '32px' : '4px',
-                                backgroundColor: idx === currentCardIndex
-                                    ? 'rgb(37 99 235)'
-                                    : idx < currentCardIndex
-                                        ? 'rgb(37 99 235 / 0.4)'
-                                        : 'rgb(0 0 0 / 0.1)'
-                            }}
-                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            className={`h-1 rounded-full w-4 ${
+                                idx < currentCardIndex
+                                    ? "bg-primary/40"
+                                    : "bg-base-content/10"
+                            }`}
                         />
                     ))}
+                    <motion.div
+                        className="absolute h-1 rounded-full bg-primary"
+                        initial={false}
+                        animate={{
+                            x: currentCardIndex * 20, // ajustează dacă nu se aliniază perfect
+                            width: 32,
+                        }}
+                        transition={{ duration: 0.25, ease: "easeOut" }}
+                    />
                 </div>
 
                 <motion.button

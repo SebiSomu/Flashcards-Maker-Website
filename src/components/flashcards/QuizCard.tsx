@@ -13,20 +13,23 @@ interface QuizCardProps {
     onEndSession?: () => void;
 }
 
-const QuizCard: React.FC<QuizCardProps> = ({
-    card,
-    folderName,
-    isFlipped,
-    onFlip,
-    isFirstPass,
-    onRate,
-    onNextCard,
-    onEndSession
-}) => {
+const QuizCard: React.FC<QuizCardProps> = React.memo(({
+                                                          card,
+                                                          folderName,
+                                                          isFlipped,
+                                                          onFlip,
+                                                          isFirstPass,
+                                                          onRate,
+                                                          onNextCard,
+                                                          onEndSession
+                                                      }) => {
     return (
         <div className="w-full max-w-3xl [perspective:1000px]">
             <div onClick={onFlip} className="relative w-full aspect-video md:aspect-[2/1] cursor-pointer group">
-                <div className={`relative w-full h-full duration-500 [transform-style:preserve-3d] transition-transform ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
+                <div
+                    className={`relative w-full h-full duration-500 [transform-style:preserve-3d] transition-transform ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}
+                    style={{ willChange: 'transform' }}
+                >
                     {/* Front Side */}
                     <div className="absolute w-full h-full [backface-visibility:hidden] bg-base-200 border-2 border-base-content/5 rounded-3xl flex flex-col items-center justify-center p-12 text-center group-hover:border-primary/20 transition-colors">
                         <div className="absolute top-0 w-full h-2 bg-gradient-to-r from-blue-500 to-primary"></div>
@@ -60,22 +63,22 @@ const QuizCard: React.FC<QuizCardProps> = ({
                         ) : (
                             <div className="flex flex-col items-center animate-fade-in-up">
                                 {onNextCard && (
-                                    <button 
-                                        onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            onNextCard(); 
-                                        }} 
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onNextCard();
+                                        }}
                                         className="btn btn-primary btn-lg px-12 font-black uppercase tracking-widest shadow-xl shadow-primary/30"
                                     >
                                         Got it!
                                     </button>
                                 )}
                                 {onEndSession && (
-                                    <button 
-                                        onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            onEndSession(); 
-                                        }} 
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEndSession();
+                                        }}
                                         className="btn btn-ghost btn-xs mt-6 opacity-20 hover:opacity-100 hover:text-error uppercase tracking-widest font-black"
                                     >
                                         End Session
@@ -88,7 +91,8 @@ const QuizCard: React.FC<QuizCardProps> = ({
             </div>
         </div>
     );
-};
+});
+
+QuizCard.displayName = 'QuizCard';
 
 export default QuizCard;
-

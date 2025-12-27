@@ -33,13 +33,13 @@ const DifficultyRating: React.FC<DifficultyRatingProps> = ({ onRate }) => {
                         className={`btn btn-circle btn-lg border-base-content/10 bg-base-100 hover:scale-110 transition-all shadow-sm relative overflow-hidden ${hoverRating >= rating
                             ? 'border-[#B8860B] dark:border-[#FFD700] bg-[#B8860B]/5 dark:bg-[#FFD700]/5'
                             : ''
-                            }`}
+                        }`}
                     >
                         <div className="flex flex-col items-center leading-none z-10">
                             <span className={`text-4xl transition-colors duration-200 ${hoverRating >= rating
                                 ? starColorClass
                                 : inactiveStarClass
-                                }`}>★</span>
+                            }`}>★</span>
                         </div>
                     </button>
                 ))}
