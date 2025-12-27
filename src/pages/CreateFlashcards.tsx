@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import MainNavBar from "../components/MainNavBar";
 import Footer from "../components/Footer";
@@ -8,18 +8,32 @@ import EditMode from "../components/flashcards/EditMode";
 import QuizMode from "../components/flashcards/QuizMode";
 import { useAuthStore } from "../store/useAuthStore";
 import { useToast } from "../hooks/useToast";
-import { fetchFlashcards, createFlashcard, updateFlashcard, deleteFlashcard, fetchFolders, createFolder, deleteFolder, type CreateFlashcardDTO, type Flashcard } from "../api/flashcards";
-
-interface BackendFlashcard {
-    ID: number;
-    front: string;
-    back: string;
-    folderId?: number | null;
-}
+import {
+    fetchFlashcards,
+    createFlashcard,
+    updateFlashcard,
+    deleteFlashcard,
+    fetchFolders,
+    createFolder,
+    deleteFolder
+} from "../api/flashcards";
+import type { CreateFlashcardDTO, Flashcard, Folder } from "../api/flashcards";
 
 const CreateFlashcards = () => {
     // Mode state: 'selection' | 'create' | 'edit' | 'quiz'
     const [mode, setMode] = useState<'selection' | 'create' | 'edit' | 'quiz'>('selection');
+
+    // Timer for auto-refreshing due cards
+    const [tick, setTick] = useState(0);
+    useEffect(() => {
+        const interval = setInterval(() => setTick(t => t + 1), 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const dismissedUntil = parseInt(localStorage.getItem('smartReviewDismissedUntil') || '0');
+    // tick is used to force re-render every 5 seconds to update isReviewDismissed
+    // eslint-disable-next-line react-hooks/purity
+    const isReviewDismissed = (void tick, Date.now() < dismissedUntil);
 
     // Auth Token
     const token = useAuthStore((state) => state.token);
@@ -33,15 +47,24 @@ const CreateFlashcards = () => {
         enabled: !!token,
     });
 
-    const { data: folders = [] } = useQuery({
+    const { data: folders = [] } = useQuery<Folder[]>({
         queryKey: ['folders'],
         queryFn: () => fetchFolders(token || ""),
         enabled: !!token,
     });
 
+    // Calculate due count - ALL cards that are due after interval (matches review logic)
+    const dueCount = useMemo(() => {
+        if (isReviewDismissed) return 0;
+        const now = new Date();
+        return flashcards.filter((card: Flashcard) => 
+            card.nextReviewAt && new Date(card.nextReviewAt) <= now
+        ).length;
+    }, [flashcards, isReviewDismissed]);
+
     // Mutations - Folders
     const createFolderMutation = useMutation({
-        mutationFn: (name: string) => createFolder(token || "", { name }),
+        mutationFn: (variables: { name: string; parentId?: number | null }) => createFolder(token || "", variables),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['folders'] });
             showToast("Folder Created!", 'success');
@@ -50,22 +73,15 @@ const CreateFlashcards = () => {
     });
 
     const deleteFolderMutation = useMutation({
-        mutationFn: async (id: number) => {
-            // Filter flashcards created by the user (or just use the fetched list)
-            // Note: 'flashcards' from useQuery might be filtered or not, but we should rely on it or fetch again
-            // For now, using the 'flashcards' from state which contains all user's flashcards
-            const cardsInFolder = flashcards.filter((card: BackendFlashcard) => card.folderId === id);
-
-            // Delete all cards in the folder
+        mutationFn: async (ID: number) => {
+            const cardsInFolder = flashcards.filter((card: Flashcard) => card.folderId === ID);
             const deletePromises = cardsInFolder.map(card => deleteFlashcard(token || "", card.ID));
             await Promise.all(deletePromises);
-
-            // Then delete the folder
-            return deleteFolder(token || "", id);
+            return deleteFolder(token || "", ID);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['folders'] });
-            queryClient.invalidateQueries({ queryKey: ['flashcards'] }); // Also invalidate flashcards
+            queryClient.invalidateQueries({ queryKey: ['flashcards'] });
             showToast("Folder and its cards deleted!", 'info');
         },
         onError: () => showToast("Failed to delete folder content.", 'error')
@@ -84,7 +100,7 @@ const CreateFlashcards = () => {
     });
 
     const updateMutation = useMutation({
-        mutationFn: (card: Flashcard) => updateFlashcard(token || "", card.ID, { front: card.front, back: card.back, folderId: card.folderId }),
+        mutationFn: (data: { ID: number, card: CreateFlashcardDTO }) => updateFlashcard(token || "", data.ID, data.card),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['flashcards'] });
             showToast("Card Updated Successfully!", 'success');
@@ -95,7 +111,7 @@ const CreateFlashcards = () => {
     });
 
     const deleteMutation = useMutation({
-        mutationFn: (id: number) => deleteFlashcard(token || "", id),
+        mutationFn: (ID: number) => deleteFlashcard(token || "", ID),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['flashcards'] });
             showToast("Card Deleted Successfully!", 'info');
@@ -120,24 +136,19 @@ const CreateFlashcards = () => {
         createMutation.mutate(newCardData);
     };
 
-    const handleUpdateCard = (updatedCard: { id: number; front: string; back: string; folderId?: number | null }) => {
-        updateMutation.mutate({ ...updatedCard, ID: updatedCard.id, userId: 0 } as Flashcard);
+    const handleUpdateCard = (updatedCard: { ID: number; front: string; back: string; folderId?: number | null }) => {
+        updateMutation.mutate({
+            ID: updatedCard.ID,
+            card: { front: updatedCard.front, back: updatedCard.back, folderId: updatedCard.folderId }
+        });
     };
 
-    const handleDeleteCard = (id: number) => {
-        deleteMutation.mutate(id);
+    const handleDeleteCard = (ID: number) => {
+        deleteMutation.mutate(ID);
     };
-
-    // Adapt flashcards for child components (no global filtering anymore)
-    const adaptedFlashcards = flashcards.map((card: BackendFlashcard) => ({
-        id: card.ID,
-        front: card.front,
-        back: card.back,
-        folderId: card.folderId
-    }));
 
     return (
-        <div className="min-h-screen bg-base-100 flex flex-col">
+        <div className="min-h-screen bg-base-100 flex flex-col text-base-content">
             <MainNavBar />
 
             <div className="flex flex-1 pt-24 h-[calc(100vh-theme(spacing.24))] relative">
@@ -158,37 +169,38 @@ const CreateFlashcards = () => {
                         onSelectCreate={handleEnterCreateMode}
                         onSelectEdit={handleEnterEditMode}
                         onSelectQuiz={handleStartQuiz}
-                        flashcardCount={adaptedFlashcards.length}
+                        flashcardCount={flashcards.length}
+                        dueCount={dueCount}
                     />
                 )}
 
                 {mode === 'create' && (
                     <CreateMode
-                        flashcards={adaptedFlashcards}
+                        flashcards={flashcards}
                         onCreate={handleCreateCard}
                         onBack={handleBackToSelection}
                         folders={folders}
-                        onCreateFolder={(name) => createFolderMutation.mutate(name)}
-                        onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
+                        onCreateFolder={(name, parentId) => createFolderMutation.mutate({ name, parentId: parentId || null })}
+                        onDeleteFolder={(ID) => deleteFolderMutation.mutate(ID)}
                         onDelete={handleDeleteCard}
                     />
                 )}
 
                 {mode === 'edit' && (
                     <EditMode
-                        flashcards={adaptedFlashcards}
+                        flashcards={flashcards}
                         onUpdate={handleUpdateCard}
                         onDelete={handleDeleteCard}
                         onBack={handleBackToSelection}
                         folders={folders}
-                        onCreateFolder={(name) => createFolderMutation.mutate(name)}
-                        onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
+                        onCreateFolder={(name, parentId) => createFolderMutation.mutate({ name, parentId: parentId || null })}
+                        onDeleteFolder={(ID) => deleteFolderMutation.mutate(ID)}
                     />
                 )}
 
                 {mode === 'quiz' && (
                     <QuizMode
-                        flashcards={adaptedFlashcards}
+                        flashcards={flashcards}
                         folders={folders}
                         onBack={handleBackToSelection}
                     />
@@ -200,4 +212,3 @@ const CreateFlashcards = () => {
 };
 
 export default CreateFlashcards;
-

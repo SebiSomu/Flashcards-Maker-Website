@@ -7,24 +7,34 @@ export interface Folder {
     ID: number;
     name: string;
     userId: number;
+    parentId?: number | null;
 }
 
 export interface Flashcard {
     ID: number;
     front: string;
     back: string;
-    userId: number;
     folderId?: number | null;
+    userId: number;
+    nextReviewAt?: string;
+    interval?: number;
+    easeFactor?: number;
+    repetitions?: number;
 }
 
 export interface CreateFlashcardDTO {
     front: string;
     back: string;
     folderId?: number | null;
+    nextReviewAt?: string;
+    interval?: number;
+    easeFactor?: number;
+    repetitions?: number;
 }
 
 export interface CreateFolderDTO {
     name: string;
+    parentId?: number | null;
 }
 
 export const fetchFlashcards = async (token: string): Promise<Flashcard[]> => {

@@ -178,6 +178,11 @@ func main() {
 			Front    string `json:"front"`
 			Back     string `json:"back"`
 			FolderID *uint  `json:"folderId"`
+			// SM2 Fields
+			NextReviewAt *time.Time `json:"nextReviewAt,omitempty"`
+			Interval     *float64   `json:"interval,omitempty"`
+			EaseFactor   *float64   `json:"easeFactor,omitempty"`
+			Repetitions  *int       `json:"repetitions,omitempty"`
 		}
 		var updateData UpdateData
 		if err := c.BodyParser(&updateData); err != nil {
@@ -187,6 +192,21 @@ func main() {
 		card.Front = updateData.Front
 		card.Back = updateData.Back
 		card.FolderID = updateData.FolderID
+
+		// Update SM2 fields if present
+		if updateData.NextReviewAt != nil {
+			card.NextReviewAt = *updateData.NextReviewAt
+		}
+		if updateData.Interval != nil {
+			card.Interval = *updateData.Interval
+		}
+		if updateData.EaseFactor != nil {
+			card.EaseFactor = *updateData.EaseFactor
+		}
+		if updateData.Repetitions != nil {
+			card.Repetitions = *updateData.Repetitions
+		}
+
 		DB.Save(&card)
 
 		return c.JSON(card)

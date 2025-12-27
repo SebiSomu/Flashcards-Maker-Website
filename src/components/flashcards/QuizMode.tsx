@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import type { Folder } from "../../api/flashcards";
+import React, { useState, useEffect, useMemo } from 'react';
+import { updateFlashcard } from "../../api/flashcards";
+import { type Folder, type Flashcard, type CreateFlashcardDTO } from "../../api/flashcards";
 import DifficultyRating from './DifficultyRating';
-
-interface Flashcard {
-    id: number;
-    front: string;
-    back: string;
-    folderId?: number | null;
-}
+import SmartReviewCard from './SmartReviewCard';
+import { calculateSM2 } from '../../utils/sm2';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '../../store/useAuthStore';
 
 interface QuizModeProps {
     flashcards: Flashcard[];
@@ -17,6 +15,7 @@ interface QuizModeProps {
 
 const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
     const [quizStarted, setQuizStarted] = useState(false);
+    const [quizType, setQuizType] = useState<'general' | 'due'>('general');
     const [selectedFolderIds, setSelectedFolderIds] = useState<number[]>([]);
     const [quizCards, setQuizCards] = useState<Flashcard[]>([]);
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -24,44 +23,76 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
     const [isFirstPass, setIsFirstPass] = useState(true);
     const [repetitionQueue, setRepetitionQueue] = useState<Flashcard[]>([]);
     const [quizComplete, setQuizComplete] = useState(false);
+    const [tick, setTick] = useState(0);
 
-    // Toggle folder selection
+    useEffect(() => {
+        const interval = setInterval(() => setTick(t => t + 1), 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const dismissedUntil = parseInt(localStorage.getItem('smartReviewDismissedUntil') || '0');
+    // tick is used to force re-render every 5 seconds to update isReviewDismissed
+    // eslint-disable-next-line react-hooks/purity
+    const isReviewDismissed = (void tick, Date.now() < dismissedUntil);
+
+    const token = useAuthStore((state) => state.token);
+    const queryClient = useQueryClient();
+
+    const updateSM2Mutation = useMutation({
+        mutationFn: (data: { ID: number, stats: CreateFlashcardDTO }) =>
+            updateFlashcard(token || "", data.ID, data.stats),
+        onSuccess: () => {
+            return queryClient.invalidateQueries({ queryKey: ['flashcards'] });
+        }
+    });
+
     const toggleFolder = (folderId: number) => {
         setSelectedFolderIds(prev =>
-            prev.includes(folderId)
-                ? prev.filter(id => id !== folderId)
-                : [...prev, folderId]
+            prev.includes(folderId) ? prev.filter(id => id !== folderId) : [...prev, folderId]
         );
     };
 
-    // Select all folders
-    const selectAllFolders = () => {
-        setSelectedFolderIds(folders.map(f => f.ID));
+    const getAllSubfolderIds = (folderId: number): number[] => {
+        const children = folders.filter(f => f.parentId === folderId);
+        const childIds = children.map(c => c.ID);
+        let allIds = [folderId, ...childIds];
+        children.forEach(child => {
+            allIds = [...allIds, ...getAllSubfolderIds(child.ID)];
+        });
+        return [...new Set(allIds)];
     };
 
-    // Clear folder selection
-    const clearFolderSelection = () => {
-        setSelectedFolderIds([]);
-    };
+    const handleStartQuiz = (type: 'general' | 'due') => {
+        let cardsToQuiz: Flashcard[] = [];
 
-    // Start quiz with selected folders
-    const handleStartQuiz = () => {
-        let cardsToQuiz = flashcards;
-
-        // If specific folders are selected, filter cards
-        if (selectedFolderIds.length > 0) {
+        if (type === 'due') {
+            const now = new Date();
             cardsToQuiz = flashcards.filter(card =>
-                card.folderId && selectedFolderIds.includes(card.folderId)
+                card.nextReviewAt && new Date(card.nextReviewAt) <= now
             );
+        } else {
+            if (selectedFolderIds.length > 0) {
+                let effectiveFolderIds: number[] = [];
+                selectedFolderIds.forEach(fid => {
+                    effectiveFolderIds = [...effectiveFolderIds, ...getAllSubfolderIds(fid)];
+                });
+                effectiveFolderIds = [...new Set(effectiveFolderIds)];
+                cardsToQuiz = flashcards.filter(card =>
+                    card.folderId &&
+                    effectiveFolderIds.includes(card.folderId)
+                );
+            } else {
+                cardsToQuiz = flashcards;
+            }
         }
 
         if (cardsToQuiz.length === 0) {
-            return; // Don't start if no cards
+            alert("No scheduled cards found.");
+            return;
         }
 
-        // Shuffle the cards
-        const shuffled = [...cardsToQuiz].sort(() => Math.random() - 0.5);
-        setQuizCards(shuffled);
+        setQuizType(type);
+        setQuizCards([...cardsToQuiz].sort(() => Math.random() - 0.5));
         setCurrentCardIndex(0);
         setIsFlipped(false);
         setIsFirstPass(true);
@@ -69,41 +100,65 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
         setQuizStarted(true);
     };
 
-    // Reset effect when flashcards change
-    useEffect(() => {
-        if (quizStarted && flashcards.length > 0) {
-            // Re-filter based on selection if quiz was already started
-        }
-    }, [flashcards, quizStarted]);
-
     const handleRate = (rating: number) => {
+        const currentCard = quizCards[currentCardIndex];
+        const sm2Result = calculateSM2(
+            rating,
+            currentCard.interval || 0,
+            currentCard.easeFactor || 2.5,
+            currentCard.repetitions || 0
+        );
+        
+        console.group(`SM2 Update: Card "${currentCard.front}"`);
+        console.log("Rating:", rating);
+        console.log("Stats BEFORE:", {
+            interval: currentCard.interval || 0,
+            easeFactor: currentCard.easeFactor || 2.5,
+            repetitions: currentCard.repetitions || 0
+        });
+        console.log("Stats AFTER:", {
+            interval: sm2Result.interval,
+            easeFactor: sm2Result.easeFactor,
+            repetitions: sm2Result.repetitions,
+            nextReview: sm2Result.nextReviewDate.toLocaleDateString() + " " + sm2Result.nextReviewDate.toLocaleTimeString()
+        });
+        console.groupEnd();
+
+        if (isFirstPass) {
+            updateSM2Mutation.mutate({
+                ID: currentCard.ID,
+                stats: {
+                    front: currentCard.front,
+                    back: currentCard.back,
+                    folderId: currentCard.folderId,
+                    nextReviewAt: sm2Result.nextReviewDate.toISOString(),
+                    interval: sm2Result.interval,
+                    easeFactor: sm2Result.easeFactor,
+                    repetitions: sm2Result.repetitions
+                }
+            });
+        }
+
         let copies = 0;
         if (rating === 3) copies = 1;
         if (rating === 4) copies = 2;
         if (rating === 5) copies = 3;
 
-        const currentCard = quizCards[currentCardIndex];
         const newItems = Array(copies).fill(currentCard);
-
-        // We accumulate the queue locally to decide immediate transitions
         const updatedQueue = [...repetitionQueue, ...newItems];
 
-        // Transition Logic
         if (currentCardIndex < quizCards.length - 1) {
-            setRepetitionQueue(updatedQueue); // Continue current pass
+            setRepetitionQueue(updatedQueue);
             setCurrentCardIndex(prev => prev + 1);
             setIsFlipped(false);
         } else {
-            // End of current Pass
             if (updatedQueue.length > 0) {
-                // Enter new repetition phase
                 setQuizCards(updatedQueue.sort(() => Math.random() - 0.5));
                 setCurrentCardIndex(0);
                 setIsFirstPass(false);
                 setIsFlipped(false);
-                setRepetitionQueue([]); // CRITICAL: Reset the queue for the next pass
+                setRepetitionQueue([]);
             } else {
-                // Finished and nothing left to repeat
                 setQuizComplete(true);
             }
         }
@@ -125,308 +180,174 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
         }
     };
 
-    const handleFlip = () => {
-        setIsFlipped(!isFlipped);
-    };
-
-    // Get count of cards that would be quizzed
-    const getQuizCardCount = () => {
-        if (selectedFolderIds.length === 0) {
-            return flashcards.length;
-        }
+    // Calculate due cards - includes ALL cards that are due after interval (classic SM2 spaced repetition)
+    const dueCards = useMemo(() => {
+        const now = new Date();
         return flashcards.filter(card =>
-            card.folderId && selectedFolderIds.includes(card.folderId)
-        ).length;
-    };
+            card.nextReviewAt && new Date(card.nextReviewAt) <= now
+        );
+    }, [flashcards]);
 
-    // Quiz Setup Screen
+    const dueFolderNames = [...new Set(dueCards.map(c => folders.find(f => f.ID === c.folderId)?.name).filter(Boolean))];
+
     if (!quizStarted) {
         return (
-            <div className="flex-1 flex flex-col w-full h-full relative z-10 animate-fade-in">
-                {/* Header */}
+            <div className="flex-1 flex flex-col w-full h-full relative z-10 animate-fade-in text-base-content">
                 <div className="w-full h-20 border-b border-base-content/10 flex items-center justify-between px-8 bg-base-100/80 backdrop-blur-sm z-30">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={onBack}
-                            className="btn btn-ghost btn-sm gap-2 text-base-content/60 hover:text-base-content"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                            </svg>
-                            Back to Menu
-                        </button>
-                        <span className="h-6 w-px bg-base-content/10"></span>
-                        <span className="font-bold text-base-content uppercase tracking-widest text-sm">Quiz Setup</span>
-                    </div>
-                </div>
-
-                {/* Setup Content */}
-                <div className="flex-1 flex items-center justify-center p-6">
-                    <div className="card w-full max-w-xl bg-base-200 shadow-xl border border-base-content/10 text-base-content">
-                        <div className="card-body p-8">
-                            <h2 className="text-2xl font-black mb-2">Configure Your Quiz</h2>
-                            <p className="text-base-content/60 mb-6">Select which folders to include in your quiz, or leave all unselected to quiz all cards.</p>
-
-                            {/* Folder Selection */}
-                            <div className="space-y-3 mb-6">
-                                <div className="flex justify-between items-center mb-4">
-                                    <span className="text-xs font-bold uppercase tracking-widest text-base-content/50">Folders</span>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={selectAllFolders}
-                                            className="btn btn-xs btn-ghost text-primary"
-                                        >
-                                            Select All
-                                        </button>
-                                        <button
-                                            onClick={clearFolderSelection}
-                                            className="btn btn-xs btn-ghost text-base-content/50"
-                                        >
-                                            Clear
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {folders.length === 0 ? (
-                                    <p className="text-base-content/40 text-sm italic">No folders created yet. All cards will be included.</p>
-                                ) : (
-                                    <div className="grid gap-2 text-base-content">
-                                        {folders.map(folder => (
-                                            <label
-                                                key={folder.ID}
-                                                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedFolderIds.includes(folder.ID)
-                                                    ? 'bg-primary/10 border-primary/30'
-                                                    : 'bg-base-100 border-base-content/10 hover:border-base-content/20'
-                                                    }`}
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    className="checkbox checkbox-primary checkbox-sm"
-                                                    checked={selectedFolderIds.includes(folder.ID)}
-                                                    onChange={() => toggleFolder(folder.ID)}
-                                                />
-                                                <span className="font-medium">{folder.name}</span>
-                                                <span className="text-base-content/40 text-xs ml-auto">
-                                                    {flashcards.filter(c => c.folderId === folder.ID).length} cards
-                                                </span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Card Count Preview */}
-                            <div className="bg-base-100 rounded-xl p-4 border border-base-content/10 mb-6 text-base-content">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-base-content/60">Cards to Quiz:</span>
-                                    <span className="text-2xl font-black text-primary">{getQuizCardCount()}</span>
-                                </div>
-                            </div>
-
-                            {/* Start Button */}
-                            <button
-                                onClick={handleStartQuiz}
-                                disabled={getQuizCardCount() === 0}
-                                className="btn btn-primary btn-lg w-full font-bold uppercase tracking-widest disabled:opacity-50"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Start Quiz
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Quiz Completion Screen
-    if (quizComplete) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-base-100 relative z-10 w-full h-full [animation:fadeIn_0.2s_ease-out_forwards] [will-change:opacity]">
-                <style dangerouslySetInnerHTML={{
-                    __html: `
-                    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-                    @keyframes scaleIn { from { opacity: 0; transform: scale(0.9) translate3d(0, 5px, 0); } to { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } }
-                `}} />
-                <div className="card w-full max-w-sm bg-base-200 shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-base-content/10 [animation:scaleIn_0.2s_cubic-bezier(0.16,1,0.3,1)_forwards] [will-change:transform,opacity] overflow-hidden text-base-content">
-                    <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-600"></div>
-                    <div className="card-body p-8 text-center">
-                        <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 relative">
-                            <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping opacity-20 [animation-duration:1s]"></div>
-                            <span className="text-4xl animate-bounce [animation-duration:1s]">🎉</span>
-                        </div>
-
-                        <h2 className="text-3xl font-black mb-2 tracking-tight">Quiz Complete!</h2>
-                        <div className="w-12 h-1 bg-primary/20 mx-auto mb-4 rounded-full"></div>
-
-                        <p className="text-base-content/60 text-sm mb-8 leading-relaxed">
-                            Outstanding progress! You've mastered these cards. Keep that momentum going!
-                        </p>
-
-                        <div className="flex flex-col gap-3 font-bold">
-                            <button
-                                onClick={onBack}
-                                className="btn btn-primary w-full uppercase tracking-widest shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L9.414 11H13a1 1 0 100-2H9.414l1.293-1.293z" clipRule="evenodd" />
-                                </svg>
-                                Back to Menu
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setQuizComplete(false);
-                                    setQuizStarted(false);
-                                }}
-                                className="btn btn-ghost btn-sm w-full hover:bg-base-content/5 transition-colors duration-200"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                Restart Session
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Quiz In Progress
-    if (quizCards.length === 0) {
-        return null;
-    }
-
-    return (
-        <div className="flex-1 flex flex-col w-full h-full relative z-10 [animation:fadeIn_0.3s_ease-out_forwards]">
-            <style dangerouslySetInnerHTML={{ __html: `@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }` }} />
-            {/* Quiz Header */}
-            <div className="w-full h-20 border-b border-base-content/10 flex items-center justify-between px-8 bg-base-100/80 backdrop-blur-sm z-30 absolute top-0 left-0 text-base-content">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={onBack}
-                        className="btn btn-ghost btn-sm gap-2 text-base-content/60 hover:text-base-content"
-                    >
+                    <button onClick={onBack} className="btn btn-ghost btn-sm gap-2 font-bold">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
                         </svg>
-                        Back to Menu
+                        Back
                     </button>
+                    <span className="font-bold uppercase tracking-widest text-sm">Quiz Setup</span>
+                </div>
+
+                <div className="flex-1 flex items-center justify-center p-6 bg-base-100/30">
+                    <div className="card w-full max-w-xl bg-base-200 shadow-xl border border-base-content/10">
+                        <div className="card-body p-8">
+                            <h2 className="text-2xl font-black mb-6">Choose Your Session</h2>
+
+                            {/* Smart Review Option */}
+                            {dueCards.length > 0 && !isReviewDismissed && (
+                                <SmartReviewCard
+                                    dueCount={dueCards.length}
+                                    folderNames={dueFolderNames as string[]}
+                                    onStart={() => handleStartQuiz('due')}
+                                    onDismiss={() => {
+                                        localStorage.setItem('smartReviewDismissedUntil', (Date.now() + 40000).toString());
+                                        setTick(t => t + 1);
+                                    }}
+                                />
+                            )}
+
+                            <div className="flex flex-col gap-4">
+                                <span className="text-xs font-bold uppercase tracking-widest text-base-content/30 text-center">Or Start a New Practice Session</span>
+                                <p className="text-xs text-center text-base-content/50 px-4 leading-relaxed">
+                                    Select folders to practice.<br/>
+                                    <strong>Rating System:</strong><br/>
+                                    1-2 Stars (0 reps) • 3 Stars (1 rep)<br/>
+                                    4 Stars (2 reps) • 5 Stars (3 reps)
+                                </p>
+
+                                <div className="space-y-2 mb-6 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                    <span className="text-xs font-bold uppercase tracking-widest text-base-content/50 block mb-2">Select Folders (Optional)</span>
+                                    {folders.map(folder => (
+                                        <label key={folder.ID} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedFolderIds.includes(folder.ID) ? 'bg-base-100 border-primary/50 text-primary' : 'bg-base-100/50 border-base-content/10 opacity-70'}`}>
+                                            <input type="checkbox" className="checkbox checkbox-primary checkbox-sm" checked={selectedFolderIds.includes(folder.ID)} onChange={() => toggleFolder(folder.ID)} />
+                                            <span className="font-medium">{folder.name}</span>
+                                        </label>
+                                    ))}
+                                    {folders.length === 0 && <p className="text-base-content/40 text-sm italic">No folders. All cards will be included.</p>}
+                                </div>
+
+                                <button
+                                    onClick={() => handleStartQuiz('general')}
+                                    className="btn btn-outline w-full font-bold uppercase tracking-widest border-base-content/20 hover:border-primary hover:bg-primary/5"
+                                >
+                                    Start General Quiz
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <style dangerouslySetInnerHTML={{
+                    __html: `
+                    @keyframes pulse-subtle {
+                        0%, 100% { transform: scale(1); }
+                        50% { transform: scale(1.01); }
+                    }
+                    .animate-pulse-subtle {
+                        animation: pulse-subtle 2s ease-in-out infinite;
+                    }
+                `}} />
+            </div>
+        );
+    }
+
+    if (quizComplete) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-base-100 animate-fade-in text-base-content w-full h-full">
+                <style dangerouslySetInnerHTML={{
+                    __html: `
+                    @keyframes scaleIn { from { opacity: 0; transform: scale(0.9) translate3d(0, 5px, 0); } to { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } }
+                `}} />
+                <div className="card w-full max-w-sm bg-base-200 shadow-2xl border border-base-content/10 p-8 text-center [animation:scaleIn_0.3s_ease-out_forwards]">
+                    <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span className="text-4xl">🎉</span>
+                    </div>
+                    <h2 className="text-3xl font-black mb-2">{quizType === 'due' ? 'Review Complete!' : 'Quiz Complete!'}</h2>
+                    <p className="text-base-content/60 text-sm mb-8">You've successfully finished this session.</p>
+                    <button onClick={onBack} className="btn btn-primary w-full font-bold uppercase tracking-widest">Done</button>
+                    <button
+                        onClick={() => { setQuizComplete(false); setQuizStarted(false); }}
+                        className="btn btn-ghost btn-sm w-full mt-4 text-xs font-bold uppercase tracking-widest text-base-content/40"
+                    >
+                        New Session
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (quizCards.length === 0) return null;
+
+    return (
+        <div className="flex-1 flex flex-col w-full h-full relative z-10 animate-fade-in bg-base-100 text-base-content">
+            <div className="w-full h-20 border-b border-base-content/10 flex items-center justify-between px-8 bg-base-100/80 backdrop-blur-sm z-30">
+                <div className="flex items-center gap-4">
+                    <button onClick={onBack} className="btn btn-ghost btn-sm font-bold opacity-40 hover:opacity-100">Exit</button>
                     <span className="h-6 w-px bg-base-content/10"></span>
-                    <span className="font-bold uppercase tracking-widest text-sm">Quiz in Progress</span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-primary/60">
+                        {quizType === 'due' ? 'Smart Review Mode' : 'Practice Mode'}
+                    </span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-base-content/50">Card</span>
                     <span className="text-xl font-black text-primary">{currentCardIndex + 1}</span>
-                    <span className="text-sm font-medium text-base-content/30">/ {quizCards.length}</span>
+                    <span className="text-xs font-bold text-base-content/20">/ {quizCards.length}</span>
                 </div>
             </div>
 
-            {/* Quiz Main Area */}
             <div className="flex-1 flex items-center justify-center p-6 pt-24">
                 <div className="w-full max-w-3xl [perspective:1000px]">
-                    <div
-                        onClick={handleFlip}
-                        className={`relative w-full aspect-video md:aspect-[2/1] bg-transparent cursor-pointer group [perspective:1000px] transition-all duration-300`}
-                    >
-                        {/* Inner Container for Flip Effect */}
-                        <div className={`relative w-full h-full duration-300 [transform-style:preserve-3d] transition-transform ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
-
-                            {/* FRONT (Question) */}
-                            <div className="absolute w-full h-full [backface-visibility:hidden]">
-                                <div className="w-full h-full bg-base-200 border border-base-content/10 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-12 relative overflow-hidden group-hover:border-primary/30 transition-colors duration-300 text-base-content">
-                                    <div className="absolute top-0 w-full h-2 bg-gradient-to-r from-blue-500 to-purple-500"></div>
-                                    <div className="mb-6">
-                                        <span className="badge badge-primary badge-lg uppercase tracking-widest font-bold px-4 py-3">Question</span>
-                                    </div>
-                                    <h3 className="text-2xl md:text-3xl text-center font-bold leading-tight whitespace-pre-wrap">
-                                        {quizCards[currentCardIndex].front}
-                                    </h3>
-                                    <p className="absolute bottom-8 text-base-content/30 text-xs font-semibold uppercase tracking-widest animate-pulse">Click to Reveal Answer</p>
-                                </div>
+                    <div onClick={() => setIsFlipped(!isFlipped)} className="relative w-full aspect-video md:aspect-[2/1] cursor-pointer group">
+                        <div className={`relative w-full h-full duration-500 [transform-style:preserve-3d] transition-transform ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
+                            <div className="absolute w-full h-full [backface-visibility:hidden] bg-base-200 border-2 border-base-content/5 rounded-3xl flex flex-col items-center justify-center p-12 text-center group-hover:border-primary/20 transition-colors">
+                                <div className="absolute top-0 w-full h-2 bg-gradient-to-r from-blue-500 to-primary"></div>
+                                <span className="badge badge-outline border-base-content/10 text-[10px] font-black uppercase tracking-widest mb-6 opacity-40">Front</span>
+                                <h3 className="text-2xl md:text-3xl font-bold leading-tight whitespace-pre-wrap">{quizCards[currentCardIndex].front}</h3>
+                                <p className="absolute bottom-8 text-xs font-bold opacity-20 uppercase tracking-[0.2em] animate-pulse">Tap to Reveal</p>
                             </div>
+                            <div className="absolute w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] bg-base-100 border-2 border-primary/20 rounded-3xl flex flex-col items-center justify-center p-12 text-center shadow-[0_0_50px_rgba(37,99,235,0.1)]">
+                                <div className="absolute top-0 w-full h-2 bg-gradient-to-r from-primary to-purple-500"></div>
+                                <span className="badge badge-outline border-primary/10 text-[10px] font-black uppercase tracking-widest mb-6 text-primary/50">Back</span>
+                                <p className="text-xl md:text-2xl font-bold mb-10 leading-relaxed text-base-content/90 whitespace-pre-wrap">{quizCards[currentCardIndex].back}</p>
 
-                            {/* BACK (Answer) */}
-                            <div className="absolute w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)]">
-                                <div className="w-full h-full bg-base-100 border border-purple-500/20 rounded-3xl shadow-[0_0_50px_rgba(168,85,247,0.15)] flex flex-col items-center justify-center p-12 relative overflow-hidden text-base-content">
-                                    <div className="absolute top-0 w-full h-2 bg-gradient-to-r from-purple-500 to-pink-500"></div>
-                                    <div className="mb-6">
-                                        <span className="badge badge-secondary badge-lg uppercase tracking-widest font-bold px-4 py-3">Answer</span>
+                                {isFirstPass ? (
+                                    <DifficultyRating onRate={handleRate} />
+                                ) : (
+                                    <div className="flex flex-col items-center animate-fade-in-up">
+                                        <button onClick={(e) => { e.stopPropagation(); handleNextCard(); }} className="btn btn-primary btn-lg px-12 font-black uppercase tracking-widest shadow-xl shadow-primary/30">Got it!</button>
+                                        <button onClick={(e) => { e.stopPropagation(); setQuizComplete(true); }} className="btn btn-ghost btn-xs mt-6 opacity-20 hover:opacity-100 hover:text-error uppercase tracking-widest font-black">End Session</button>
                                     </div>
-
-                                    <p className="text-xl md:text-2xl text-center font-medium text-base-content/90 leading-relaxed max-w-2xl whitespace-pre-wrap">
-                                        {quizCards[currentCardIndex].back}
-                                    </p>
-
-                                    {/* Rating System - Only shown on first pass */}
-                                    {isFirstPass ? (
-                                        <DifficultyRating onRate={handleRate} />
-                                    ) : (
-                                        <div className="mt-8 flex flex-col items-center [animation:fadeInUp_0.3s_ease-out_forwards]">
-                                            <style dangerouslySetInnerHTML={{ __html: `@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }` }} />
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleNextCard();
-                                                }}
-                                                className="btn btn-primary btn-lg px-12 font-bold uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-                                            >
-                                                Got it!
-                                            </button>
-
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setQuizComplete(true);
-                                                }}
-                                                className="btn btn-ghost btn-xs text-base-content/30 mt-6 hover:text-error transition-colors"
-                                            >
-                                                End Quiz Early
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Quiz Footer Controls */}
-            <div className="h-24 border-t border-base-content/10 bg-base-200/50 backdrop-blur-md flex items-center justify-center gap-6 z-30">
-                <button
-                    onClick={handlePrevCard}
-                    disabled={currentCardIndex === 0}
-                    className="btn btn-circle btn-outline border-base-content/20 hover:bg-base-content hover:text-base-100 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-200"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
+            <div className="h-24 border-t border-base-content/10 bg-base-200/50 flex items-center justify-center gap-6">
+                <button onClick={handlePrevCard} disabled={currentCardIndex === 0} className="btn btn-circle btn-outline btn-sm opacity-40 hover:opacity-100 disabled:opacity-5 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 </button>
-
-                <div className="flex flex-col items-center">
-                    <span className="text-xs font-bold uppercase tracking-widest text-base-content/30 mb-1">Navigation</span>
-                    <div className="flex gap-1">
-                        {quizCards.map((_, idx) => (
-                            <div
-                                key={idx}
-                                className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentCardIndex ? 'w-6 bg-primary' : 'w-1.5 bg-base-content/10'}`}
-                            ></div>
-                        ))}
-                    </div>
+                <div className="flex gap-1">
+                    {quizCards.map((_, idx) => (
+                        <div key={idx} className={`h-1 rounded-full transition-all duration-300 ${idx === currentCardIndex ? 'w-4 bg-primary' : 'w-1 bg-base-content/10'}`}></div>
+                    ))}
                 </div>
-
-                <button
-                    onClick={handleNextCard}
-                    disabled={currentCardIndex === quizCards.length - 1}
-                    className="btn btn-circle btn-primary shadow-lg shadow-primary/30 disabled:opacity-20 disabled:shadow-none disabled:bg-neutral disabled:text-neutral-content disabled:cursor-not-allowed transition-all duration-200"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                <button onClick={handleNextCard} disabled={currentCardIndex === quizCards.length - 1} className="btn btn-circle btn-primary btn-sm shadow-lg shadow-primary/20 disabled:opacity-5 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                 </button>
             </div>
         </div>

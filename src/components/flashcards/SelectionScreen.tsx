@@ -5,13 +5,15 @@ interface SelectionScreenProps {
     onSelectEdit: () => void;
     onSelectQuiz: () => void;
     flashcardCount: number;
+    dueCount: number;
 }
 
 const SelectionScreen: React.FC<SelectionScreenProps> = ({
     onSelectCreate,
     onSelectEdit,
     onSelectQuiz,
-    flashcardCount
+    flashcardCount,
+    dueCount
 }) => {
     return (
         <div className="flex h-full w-full max-w-5xl mx-auto px-6 pt-6">
@@ -66,10 +68,17 @@ const SelectionScreen: React.FC<SelectionScreenProps> = ({
                         className={`group relative bg-base-200 p-8 rounded-3xl border border-base-content/10 hover:border-purple-500/30 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/10 cursor-pointer overflow-hidden text-left ${flashcardCount === 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
                     >
                         <div className="absolute top-0 left-0 w-2 h-full bg-purple-500 transition-all group-hover:w-full group-hover:opacity-5"></div>
-                        <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                            </svg>
+                        <div className="flex justify-between items-start mb-6">
+                            <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>
+                            </div>
+                            {dueCount > 0 && (
+                                <div className="badge badge-primary badge-lg animate-bounce font-black shadow-lg shadow-primary/20">
+                                    {dueCount} DUE
+                                </div>
+                            )}
                         </div>
                         <h2 className="text-2xl font-bold text-base-content mb-2 group-hover:text-purple-500 transition-colors">Quiz</h2>
                         <p className="text-base-content/60">Test your knowledge with a randomized quiz.</p>

@@ -30,16 +30,24 @@ type UserResponse struct {
 
 type Folder struct {
 	gorm.Model
-	Name   string `json:"name"`
-	UserID uint   `json:"userId"`
+	Name     string    `json:"name"`
+	UserID   uint      `json:"userId"`
+	ParentID *uint     `json:"parentId"`
+	Children []Folder  `gorm:"foreignkey:ParentID" json:"children,omitempty"`
 }
 
 type Flashcard struct {
 	gorm.Model
-	Front    string `json:"front"`
-	Back     string `json:"back"`
-	UserID   uint   `json:"userId"`
-	FolderID *uint  `json:"folderId"`
+	Front          string    `json:"front"`
+	Back           string    `json:"back"`
+	UserID         uint      `json:"userId"`
+	FolderID       *uint     `json:"folderId"`
+
+	// SM2 Fields
+	NextReviewAt   time.Time `json:"nextReviewAt"`
+	Interval       float64   `json:"interval"` // Days
+	EaseFactor     float64   `json:"easeFactor"`
+	Repetitions    int       `json:"repetitions"`
 }
 
 func (u *User) ToResponse() UserResponse {

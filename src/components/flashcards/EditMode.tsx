@@ -1,23 +1,16 @@
 import React, { useState } from 'react';
 import FlashcardSidebar from './FlashcardSidebar';
 import FolderList from './FolderList';
-import type { Folder } from "../../api/flashcards";
-
-interface Flashcard {
-    id: number;
-    front: string;
-    back: string;
-    folderId?: number | null;
-}
+import { type Folder, type Flashcard } from "../../api/flashcards";
 
 interface EditModeProps {
     flashcards: Flashcard[];
-    onUpdate: (card: { id: number; front: string; back: string; folderId?: number | null }) => void;
-    onDelete: (id: number) => void;
+    onUpdate: (card: { ID: number; front: string; back: string; folderId?: number | null }) => void;
+    onDelete: (ID: number) => void;
     onBack: () => void;
     folders: Folder[];
-    onCreateFolder: (name: string) => void;
-    onDeleteFolder: (id: number) => void;
+    onCreateFolder: (name: string, parentId?: number | null) => void;
+    onDeleteFolder: (ID: number) => void;
 }
 
 const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onBack, folders, onCreateFolder, onDeleteFolder }) => {
@@ -30,7 +23,7 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
     const handleCardClick = (card: Flashcard) => {
         setFront(card.front);
         setBack(card.back);
-        setSelectedCardId(card.id);
+        setSelectedCardId(card.ID);
         setEditFolderId(card.folderId || null);
     };
 
@@ -45,7 +38,7 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
         if (!front.trim() || !back.trim() || !selectedCardId) return;
 
         onUpdate({
-            id: selectedCardId,
+            ID: selectedCardId,
             front,
             back,
             folderId: editFolderId
@@ -64,8 +57,7 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
     );
 
     return (
-        <div className="flex flex-1 w-full h-full relative z-10 overflow-hidden">
-            {/* Unified Sidebar with Folders above Cards */}
+        <div className="flex flex-1 w-full h-full relative z-10 overflow-hidden text-base-content">
             <FlashcardSidebar
                 flashcards={filteredFlashcards}
                 selectedCardId={selectedCardId}
@@ -85,11 +77,9 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
                 }
             />
 
-            {/* Main Content - Edit Area */}
             <div className="flex-1 flex flex-col bg-base-100/50 p-6 md:p-10">
                 <div className="flex-1 flex items-center justify-center">
                     <div className="card w-full max-w-2xl bg-base-200 shadow-xl border border-base-content/10">
-                        {/* Edit Mode Empty State */}
                         {!selectedCardId ? (
                             <div className="card-body p-8 md:p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
                                 <div className="w-20 h-20 bg-base-100 rounded-full flex items-center justify-center mb-6">
@@ -97,86 +87,53 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                     </svg>
                                 </div>
-                                <h3 className="text-xl font-bold text-base-content mb-2">Select a Flashcard</h3>
-                                <p className="text-base-content/60 max-w-xs">Choose a card from the sidebar to edit its content or delete it.</p>
+                                <h3 className="text-xl font-bold mb-2">Select a Flashcard</h3>
+                                <p className="text-base-content/60 max-w-xs">Choose a card from the sidebar to edit its content.</p>
                             </div>
                         ) : (
-                            /* Form (Edit Mode) */
                             <div className="card-body p-8 md:p-12 animate-fade-in">
                                 <div className="flex justify-between items-center border-b border-base-content/10 pb-4 mb-8">
-                                    <h2 className="text-2xl text-base-content font-black">
-                                        Edit Flashcard
-                                    </h2>
-                                    <div className="badge badge-outline text-xs font-bold uppercase tracking-widest p-3 badge-primary">
-                                        Editing Mode
-                                    </div>
+                                    <h2 className="text-2xl font-black">Edit Flashcard</h2>
+                                    <div className="badge badge-outline text-xs font-bold uppercase tracking-widest p-3 badge-primary">Editing Mode</div>
                                 </div>
 
                                 <div className="space-y-6">
-                                    {/* Folder Selection */}
                                     <div className="form-control w-full">
-                                        <label className="label">
-                                            <span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Folder</span>
-                                        </label>
+                                        <label className="label"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Folder</span></label>
                                         <select
                                             className="select select-bordered w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none"
                                             value={editFolderId || ""}
                                             onChange={(e) => setEditFolderId(e.target.value ? Number(e.target.value) : null)}
                                         >
                                             <option value="">(Uncategorized)</option>
-                                            {folders.map(folder => (
-                                                <option key={folder.ID} value={folder.ID}>{folder.name}</option>
-                                            ))}
+                                            {folders.map(folder => (<option key={folder.ID} value={folder.ID}>{folder.name}</option>))}
                                         </select>
                                     </div>
 
                                     <div className="form-control w-full">
-                                        <label className="label">
-                                            <span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Front Side (Question)</span>
-                                        </label>
+                                        <label className="label"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Front Side</span></label>
                                         <textarea
-                                            className="textarea textarea-bordered h-20 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-base h-14"
+                                            className="textarea textarea-bordered h-20 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-base"
                                             value={front}
                                             onChange={(e) => setFront(e.target.value)}
-                                            placeholder="e.g. What is React?"
                                         ></textarea>
                                     </div>
 
                                     <div className="form-control w-full">
-                                        <label className="label">
-                                            <span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Back Side (Answer)</span>
-                                        </label>
+                                        <label className="label"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Back Side</span></label>
                                         <textarea
                                             className="textarea textarea-bordered h-32 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-base leading-relaxed"
                                             value={back}
                                             onChange={(e) => setBack(e.target.value)}
-                                            placeholder="e.g. A JavaScript library..."
                                         ></textarea>
                                     </div>
                                 </div>
 
                                 <div className="card-actions justify-between mt-8">
-                                    <div>
-                                        <button
-                                            className="btn bg-red-500/10 hover:bg-red-500/20 text-red-500 border-none mr-2"
-                                            onClick={handleDelete}
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
+                                    <button className="btn bg-red-500/10 hover:bg-red-500/20 text-red-500 border-none mr-2 font-bold" onClick={handleDelete}>Delete</button>
                                     <div className="flex gap-2">
-                                        <button
-                                            className="btn bg-transparent border-base-content/20 text-base-content hover:bg-base-content/10"
-                                            onClick={handleClearForm}
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            className="btn bg-primary hover:bg-primary/90 text-primary-content border-none px-8"
-                                            onClick={handleSave}
-                                        >
-                                            Save Changes
-                                        </button>
+                                        <button className="btn bg-transparent border-base-content/20 text-base-content hover:bg-base-content/10 font-bold" onClick={handleClearForm}>Cancel</button>
+                                        <button className="btn bg-primary hover:bg-primary/90 text-primary-content border-none px-8 font-bold uppercase tracking-widest" onClick={handleSave}>Save Changes</button>
                                     </div>
                                 </div>
                             </div>
@@ -189,4 +146,3 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
 };
 
 export default EditMode;
-
