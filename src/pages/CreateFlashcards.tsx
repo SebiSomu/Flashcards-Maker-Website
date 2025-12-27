@@ -50,12 +50,25 @@ const CreateFlashcards = () => {
     });
 
     const deleteFolderMutation = useMutation({
-        mutationFn: (id: number) => deleteFolder(token || "", id),
+        mutationFn: async (id: number) => {
+            // Filter flashcards created by the user (or just use the fetched list)
+            // Note: 'flashcards' from useQuery might be filtered or not, but we should rely on it or fetch again
+            // For now, using the 'flashcards' from state which contains all user's flashcards
+            const cardsInFolder = flashcards.filter((card: BackendFlashcard) => card.folderId === id);
+
+            // Delete all cards in the folder
+            const deletePromises = cardsInFolder.map(card => deleteFlashcard(token || "", card.ID));
+            await Promise.all(deletePromises);
+
+            // Then delete the folder
+            return deleteFolder(token || "", id);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['folders'] });
-            showToast("Folder Deleted!", 'info');
+            queryClient.invalidateQueries({ queryKey: ['flashcards'] }); // Also invalidate flashcards
+            showToast("Folder and its cards deleted!", 'info');
         },
-        onError: () => showToast("Failed to delete folder.", 'error')
+        onError: () => showToast("Failed to delete folder content.", 'error')
     });
 
     // Mutations
