@@ -53,12 +53,14 @@ const CreateFlashcards = () => {
         enabled: !!token,
     });
 
-    // Calculate due count - ALL cards that are due after interval (matches review logic)
+    // Calculate due count - only cards that have been reviewed at least once and are due after interval
     const dueCount = useMemo(() => {
         if (isReviewDismissed) return 0;
         const now = new Date();
         return flashcards.filter((card: Flashcard) => 
-            card.nextReviewAt && new Date(card.nextReviewAt) <= now
+            card.nextReviewAt && 
+            new Date(card.nextReviewAt) <= now &&
+            (card.repetitions || 0) > 0  // Only include cards that have been reviewed at least once
         ).length;
     }, [flashcards, isReviewDismissed]);
 

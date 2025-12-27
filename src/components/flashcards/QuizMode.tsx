@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { updateFlashcard } from "../../api/flashcards";
 import { type Folder, type Flashcard, type CreateFlashcardDTO } from "../../api/flashcards";
 import SmartReviewCard from './SmartReviewCard';
@@ -24,6 +25,7 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
     const [repetitionQueue, setRepetitionQueue] = useState<Flashcard[]>([]);
     const [quizComplete, setQuizComplete] = useState(false);
     const [tick, setTick] = useState(0);
+    const [direction, setDirection] = useState(0); // 1 = next, -1 = prev
 
     useEffect(() => {
         const interval = setInterval(() => setTick(t => t + 1), 5000);
@@ -31,7 +33,6 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
     }, []);
 
     const dismissedUntil = parseInt(localStorage.getItem('smartReviewDismissedUntil') || '0');
-    // tick is used to force re-render every 5 seconds to update isReviewDismissed
     // eslint-disable-next-line react-hooks/purity
     const isReviewDismissed = (void tick, Date.now() < dismissedUntil);
 
@@ -68,7 +69,9 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
         if (type === 'due') {
             const now = new Date();
             cardsToQuiz = flashcards.filter(card =>
-                card.nextReviewAt && new Date(card.nextReviewAt) <= now
+                card.nextReviewAt &&
+                new Date(card.nextReviewAt) <= now &&
+                (card.repetitions || 0) > 0
             );
         } else {
             if (selectedFolderIds.length > 0) {
@@ -108,7 +111,7 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
             currentCard.easeFactor || 2.5,
             currentCard.repetitions || 0
         );
-        
+
         console.group(`SM2 Update: Card "${currentCard.front}"`);
         console.log("Rating:", rating);
         console.log("Stats BEFORE:", {
@@ -147,44 +150,56 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
         const newItems = Array(copies).fill(currentCard);
         const updatedQueue = [...repetitionQueue, ...newItems];
 
-        if (currentCardIndex < quizCards.length - 1) {
-            setRepetitionQueue(updatedQueue);
-            setCurrentCardIndex(prev => prev + 1);
-            setIsFlipped(false);
-        } else {
-            if (updatedQueue.length > 0) {
-                setQuizCards(updatedQueue.sort(() => Math.random() - 0.5));
-                setCurrentCardIndex(0);
-                setIsFirstPass(false);
-                setIsFlipped(false);
-                setRepetitionQueue([]);
+        setIsFlipped(false);
+        setDirection(1);
+
+        setTimeout(() => {
+            if (currentCardIndex < quizCards.length - 1) {
+                setRepetitionQueue(updatedQueue);
+                setCurrentCardIndex(prev => prev + 1);
             } else {
-                setQuizComplete(true);
+                if (updatedQueue.length > 0) {
+                    setQuizCards(updatedQueue.sort(() => Math.random() - 0.5));
+                    setCurrentCardIndex(0);
+                    setIsFirstPass(false);
+                    setRepetitionQueue([]);
+                } else {
+                    setQuizComplete(true);
+                }
             }
-        }
+        }, 150);
     };
 
     const handleNextCard = () => {
-        if (currentCardIndex < quizCards.length - 1) {
-            setCurrentCardIndex(prev => prev + 1);
-            setIsFlipped(false);
-        } else if (!isFirstPass) {
-            setQuizComplete(true);
-        }
+        setDirection(1);
+        setIsFlipped(false);
+
+        setTimeout(() => {
+            if (currentCardIndex < quizCards.length - 1) {
+                setCurrentCardIndex(prev => prev + 1);
+            } else if (!isFirstPass) {
+                setQuizComplete(true);
+            }
+        }, 150);
     };
 
     const handlePrevCard = () => {
-        if (currentCardIndex > 0) {
-            setCurrentCardIndex(prev => prev - 1);
-            setIsFlipped(false);
-        }
+        setDirection(-1);
+        setIsFlipped(false);
+
+        setTimeout(() => {
+            if (currentCardIndex > 0) {
+                setCurrentCardIndex(prev => prev - 1);
+            }
+        }, 150);
     };
 
-    // Calculate due cards - includes ALL cards that are due after interval (classic SM2 spaced repetition)
     const dueCards = useMemo(() => {
         const now = new Date();
         return flashcards.filter(card =>
-            card.nextReviewAt && new Date(card.nextReviewAt) <= now
+            card.nextReviewAt &&
+            new Date(card.nextReviewAt) <= now &&
+            (card.repetitions || 0) > 0
         );
     }, [flashcards]);
 
@@ -192,7 +207,12 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
 
     if (!quizStarted) {
         return (
-            <div className="flex-1 flex flex-col w-full h-full relative z-10 animate-fade-in text-base-content">
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex-1 flex flex-col w-full h-full relative z-10 text-base-content"
+            >
                 <div className="w-full h-20 border-b border-base-content/10 flex items-center justify-between px-8 bg-base-100/80 backdrop-blur-sm z-30">
                     <button onClick={onBack} className="btn btn-ghost btn-sm gap-2 font-bold">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -203,25 +223,51 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                     <span className="font-bold uppercase tracking-widest text-sm">Quiz Setup</span>
                 </div>
 
-                <div className="flex-1 flex items-center justify-center p-6 bg-base-100/30">
-                    <div className="card w-full max-w-xl bg-base-200 shadow-xl border border-base-content/10">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex-1 flex items-center justify-center p-6 bg-base-100/30"
+                >
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.1 }}
+                        className="card w-full max-w-xl bg-base-200 shadow-xl border border-base-content/10"
+                    >
                         <div className="card-body p-8">
-                            <h2 className="text-2xl font-black mb-6">Choose Your Session</h2>
+                            <motion.h2
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                                className="text-2xl font-black mb-6"
+                            >
+                                Choose Your Session
+                            </motion.h2>
 
-                            {/* Smart Review Option */}
                             {dueCards.length > 0 && !isReviewDismissed && (
-                                <SmartReviewCard
-                                    dueCount={dueCards.length}
-                                    folderNames={dueFolderNames as string[]}
-                                    onStart={() => handleStartQuiz('due')}
-                                    onDismiss={() => {
-                                        localStorage.setItem('smartReviewDismissedUntil', (Date.now() + 40000).toString());
-                                        setTick(t => t + 1);
-                                    }}
-                                />
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.3 }}
+                                >
+                                    <SmartReviewCard
+                                        dueCount={dueCards.length}
+                                        folderNames={dueFolderNames as string[]}
+                                        onStart={() => handleStartQuiz('due')}
+                                        onDismiss={() => {
+                                            localStorage.setItem('smartReviewDismissedUntil', (Date.now() + 40000).toString());
+                                            setTick(t => t + 1);
+                                        }}
+                                    />
+                                </motion.div>
                             )}
 
-                            <div className="flex flex-col gap-4">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.4 }}
+                                className="flex flex-col gap-4"
+                            >
                                 <span className="text-xs font-bold uppercase tracking-widest text-base-content/30 text-center">Or Start a New Practice Session</span>
                                 <p className="text-xs text-center text-base-content/50 px-4 leading-relaxed">
                                     Select folders to practice.<br/>
@@ -230,7 +276,12 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                                     4 Stars (2 reps) • 5 Stars (3 reps)
                                 </p>
 
-                                <div className="space-y-2 mb-6 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.5 }}
+                                    className="space-y-2 mb-6 max-h-48 overflow-y-auto pr-2 custom-scrollbar"
+                                >
                                     <span className="text-xs font-bold uppercase tracking-widest text-base-content/50 block mb-2">Select Folders (Optional)</span>
                                     {folders.map(folder => (
                                         <label key={folder.ID} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedFolderIds.includes(folder.ID) ? 'bg-base-100 border-primary/50 text-primary' : 'bg-base-100/50 border-base-content/10 opacity-70'}`}>
@@ -239,64 +290,148 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                                         </label>
                                     ))}
                                     {folders.length === 0 && <p className="text-base-content/40 text-sm italic">No folders. All cards will be included.</p>}
-                                </div>
+                                </motion.div>
 
-                                <button
+                                <motion.button
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.6 }}
                                     onClick={() => handleStartQuiz('general')}
                                     className="btn btn-outline w-full font-bold uppercase tracking-widest border-base-content/20 hover:border-primary hover:bg-primary/5"
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
                                 >
                                     Start General Quiz
-                                </button>
-                            </div>
+                                </motion.button>
+                            </motion.div>
                         </div>
-                    </div>
-                </div>
-                <style dangerouslySetInnerHTML={{
-                    __html: `
-                    @keyframes pulse-subtle {
-                        0%, 100% { transform: scale(1); }
-                        50% { transform: scale(1.01); }
-                    }
-                    .animate-pulse-subtle {
-                        animation: pulse-subtle 2s ease-in-out infinite;
-                    }
-                `}} />
-            </div>
+                    </motion.div>
+                </motion.div>
+            </motion.div>
         );
     }
 
     if (quizComplete) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-base-100 animate-fade-in text-base-content w-full h-full">
-                <style dangerouslySetInnerHTML={{
-                    __html: `
-                    @keyframes scaleIn { from { opacity: 0; transform: scale(0.9) translate3d(0, 5px, 0); } to { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } }
-                `}} />
-                <div className="card w-full max-w-sm bg-base-200 shadow-2xl border border-base-content/10 p-8 text-center [animation:scaleIn_0.3s_ease-out_forwards]">
-                    <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex-1 flex flex-col items-center justify-center p-6 bg-base-100 text-base-content w-full h-full"
+            >
+                <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    className="card w-full max-w-sm bg-base-200 shadow-2xl border border-base-content/10 p-8 text-center"
+                >
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+                        className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6"
+                    >
                         <span className="text-4xl">🎉</span>
-                    </div>
-                    <h2 className="text-3xl font-black mb-2">{quizType === 'due' ? 'Review Complete!' : 'Quiz Complete!'}</h2>
-                    <p className="text-base-content/60 text-sm mb-8">You've successfully finished this session.</p>
-                    <button onClick={onBack} className="btn btn-primary w-full font-bold uppercase tracking-widest">Done</button>
-                    <button
+                    </motion.div>
+                    <motion.h2
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-3xl font-black mb-2"
+                    >
+                        {quizType === 'due' ? 'Review Complete!' : 'Quiz Complete!'}
+                    </motion.h2>
+                    <motion.p
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                        className="text-base-content/60 text-sm mb-8"
+                    >
+                        You've successfully finished this session.
+                    </motion.p>
+                    <motion.button
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.4 }}
+                        onClick={onBack}
+                        className="btn btn-primary w-full font-bold uppercase tracking-widest"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                    >
+                        Done
+                    </motion.button>
+                    <motion.button
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.5 }}
                         onClick={() => { setQuizComplete(false); setQuizStarted(false); }}
                         className="btn btn-ghost btn-sm w-full mt-4 text-xs font-bold uppercase tracking-widest text-base-content/40"
                     >
                         New Session
-                    </button>
-                </div>
-            </div>
+                    </motion.button>
+                </motion.div>
+            </motion.div>
         );
     }
 
     if (quizCards.length === 0) return null;
 
+    const cardAnimation = {
+        initial: (dir: number) => ({
+            x: dir > 0 ? 100 : -100,
+            opacity: 0,
+            scale: 0.95,
+            rotateY: dir > 0 ? 10 : -10,
+        }),
+        animate: {
+            x: 0,
+            opacity: 1,
+            scale: 1,
+            rotateY: 0,
+            transition: {
+                type: "spring" as const,
+                stiffness: 300,
+                damping: 25,
+                mass: 0.8
+            }
+        },
+        exit: (dir: number) => ({
+            x: dir > 0 ? -100 : 100,
+            opacity: 0,
+            scale: 0.95,
+            rotateY: dir > 0 ? -10 : 10,
+            transition: {
+                duration: 0.2,
+                ease: "easeInOut" as const
+            }
+        })
+    };
+
     return (
-        <div className="flex-1 flex flex-col w-full h-full relative z-10 animate-fade-in bg-base-100 text-base-content">
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col w-full h-full relative z-10 bg-base-100 text-base-content"
+        >
+            {/* Animated gradient background */}
+            <motion.div
+                animate={{
+                    background: [
+                        'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(168, 85, 247, 0.05) 50%, rgba(37, 99, 235, 0.05) 100%)',
+                        'linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(37, 99, 235, 0.05) 50%, rgba(168, 85, 247, 0.05) 100%)',
+                        'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(168, 85, 247, 0.05) 50%, rgba(37, 99, 235, 0.05) 100%)'
+                    ]
+                }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 bg-[size:200%_200%] opacity-30 pointer-events-none z-0"
+            />
+
             <div className="w-full h-20 border-b border-base-content/10 flex items-center justify-between px-8 bg-base-100/80 backdrop-blur-sm z-30">
                 <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="btn btn-ghost btn-sm font-bold opacity-40 hover:opacity-100">Exit</button>
+                    <button onClick={onBack} className="btn btn-ghost btn-sm font-bold opacity-40 hover:opacity-100">
+                        Exit
+                    </button>
                     <span className="h-6 w-px bg-base-content/10"></span>
                     <span className="text-xs font-bold uppercase tracking-widest text-primary/60">
                         {quizType === 'due' ? 'Smart Review Mode' : 'Practice Mode'}
@@ -308,33 +443,81 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                 </div>
             </div>
 
-            <div className="flex-1 flex items-center justify-center p-6 pt-24">
-                <QuizCard
-                    card={quizCards[currentCardIndex]}
-                    folderName={quizCards[currentCardIndex].folderId ? folders.find(f => f.ID === quizCards[currentCardIndex].folderId)?.name : undefined}
-                    isFlipped={isFlipped}
-                    onFlip={() => setIsFlipped(!isFlipped)}
-                    isFirstPass={isFirstPass}
-                    onRate={handleRate}
-                    onNextCard={handleNextCard}
-                    onEndSession={() => setQuizComplete(true)}
-                />
+            <div className="flex-1 flex items-center justify-center p-6">
+                <AnimatePresence mode="wait" custom={direction}>
+                    <motion.div
+                        key={currentCardIndex}
+                        custom={direction}
+                        variants={cardAnimation}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        className="w-full max-w-3xl"
+                    >
+                        <QuizCard
+                            card={quizCards[currentCardIndex]}
+                            folderName={quizCards[currentCardIndex].folderId ? folders.find(f => f.ID === quizCards[currentCardIndex].folderId)?.name : undefined}
+                            isFlipped={isFlipped}
+                            onFlip={() => setIsFlipped(!isFlipped)}
+                            isFirstPass={isFirstPass}
+                            onRate={handleRate}
+                            onNextCard={handleNextCard}
+                            onEndSession={() => setQuizComplete(true)}
+                        />
+                    </motion.div>
+                </AnimatePresence>
             </div>
 
-            <div className="h-24 border-t border-base-content/10 bg-base-200/50 flex items-center justify-center gap-6">
-                <button onClick={handlePrevCard} disabled={currentCardIndex === 0} className="btn btn-circle btn-outline btn-sm opacity-40 hover:opacity-100 disabled:opacity-5 transition-all">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                </button>
+            <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="h-24 border-t border-base-content/10 bg-base-200/50 flex items-center justify-center gap-6"
+            >
+                <motion.button
+                    onClick={handlePrevCard}
+                    disabled={currentCardIndex === 0}
+                    className="btn btn-circle btn-outline btn-sm opacity-40 hover:opacity-100 disabled:opacity-5"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                </motion.button>
+
                 <div className="flex gap-1">
                     {quizCards.map((_, idx) => (
-                        <div key={idx} className={`h-1 rounded-full transition-all duration-300 ${idx === currentCardIndex ? 'w-4 bg-primary' : 'w-1 bg-base-content/10'}`}></div>
+                        <motion.div
+                            key={idx}
+                            className={`h-1 rounded-full ${idx === currentCardIndex ? 'w-8 bg-primary' : 'w-1 bg-base-content/10'}`}
+                            initial={{ width: idx === currentCardIndex ? '8px' : '4px' }}
+                            animate={{
+                                width: idx === currentCardIndex ? '32px' : '4px',
+                                backgroundColor: idx === currentCardIndex
+                                    ? 'rgb(37 99 235)'
+                                    : idx < currentCardIndex
+                                        ? 'rgb(37 99 235 / 0.4)'
+                                        : 'rgb(0 0 0 / 0.1)'
+                            }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                        />
                     ))}
                 </div>
-                <button onClick={handleNextCard} disabled={currentCardIndex === quizCards.length - 1} className="btn btn-circle btn-primary btn-sm shadow-lg shadow-primary/20 disabled:opacity-5 transition-all">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                </button>
-            </div>
-        </div>
+
+                <motion.button
+                    onClick={handleNextCard}
+                    disabled={currentCardIndex === quizCards.length - 1}
+                    className="btn btn-circle btn-primary btn-sm shadow-lg shadow-primary/20 disabled:opacity-5"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                </motion.button>
+            </motion.div>
+        </motion.div>
     );
 };
 
