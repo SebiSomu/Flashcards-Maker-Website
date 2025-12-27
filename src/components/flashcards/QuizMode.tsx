@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { updateFlashcard } from "../../api/flashcards";
 import { type Folder, type Flashcard, type CreateFlashcardDTO } from "../../api/flashcards";
-import DifficultyRating from './DifficultyRating';
 import SmartReviewCard from './SmartReviewCard';
+import QuizCard from './QuizCard';
 import { calculateSM2 } from '../../utils/sm2';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -309,32 +309,16 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
             </div>
 
             <div className="flex-1 flex items-center justify-center p-6 pt-24">
-                <div className="w-full max-w-3xl [perspective:1000px]">
-                    <div onClick={() => setIsFlipped(!isFlipped)} className="relative w-full aspect-video md:aspect-[2/1] cursor-pointer group">
-                        <div className={`relative w-full h-full duration-500 [transform-style:preserve-3d] transition-transform ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
-                            <div className="absolute w-full h-full [backface-visibility:hidden] bg-base-200 border-2 border-base-content/5 rounded-3xl flex flex-col items-center justify-center p-12 text-center group-hover:border-primary/20 transition-colors">
-                                <div className="absolute top-0 w-full h-2 bg-gradient-to-r from-blue-500 to-primary"></div>
-                                <span className="badge badge-outline border-base-content/10 text-[10px] font-black uppercase tracking-widest mb-6 opacity-40">Front</span>
-                                <h3 className="text-2xl md:text-3xl font-bold leading-tight whitespace-pre-wrap">{quizCards[currentCardIndex].front}</h3>
-                                <p className="absolute bottom-8 text-xs font-bold opacity-20 uppercase tracking-[0.2em] animate-pulse">Tap to Reveal</p>
-                            </div>
-                            <div className="absolute w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] bg-base-100 border-2 border-primary/20 rounded-3xl flex flex-col items-center justify-center p-12 text-center shadow-[0_0_50px_rgba(37,99,235,0.1)]">
-                                <div className="absolute top-0 w-full h-2 bg-gradient-to-r from-primary to-purple-500"></div>
-                                <span className="badge badge-outline border-primary/10 text-[10px] font-black uppercase tracking-widest mb-6 text-primary/50">Back</span>
-                                <p className="text-xl md:text-2xl font-bold mb-10 leading-relaxed text-base-content/90 whitespace-pre-wrap">{quizCards[currentCardIndex].back}</p>
-
-                                {isFirstPass ? (
-                                    <DifficultyRating onRate={handleRate} />
-                                ) : (
-                                    <div className="flex flex-col items-center animate-fade-in-up">
-                                        <button onClick={(e) => { e.stopPropagation(); handleNextCard(); }} className="btn btn-primary btn-lg px-12 font-black uppercase tracking-widest shadow-xl shadow-primary/30">Got it!</button>
-                                        <button onClick={(e) => { e.stopPropagation(); setQuizComplete(true); }} className="btn btn-ghost btn-xs mt-6 opacity-20 hover:opacity-100 hover:text-error uppercase tracking-widest font-black">End Session</button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <QuizCard
+                    card={quizCards[currentCardIndex]}
+                    folderName={quizCards[currentCardIndex].folderId ? folders.find(f => f.ID === quizCards[currentCardIndex].folderId)?.name : undefined}
+                    isFlipped={isFlipped}
+                    onFlip={() => setIsFlipped(!isFlipped)}
+                    isFirstPass={isFirstPass}
+                    onRate={handleRate}
+                    onNextCard={handleNextCard}
+                    onEndSession={() => setQuizComplete(true)}
+                />
             </div>
 
             <div className="h-24 border-t border-base-content/10 bg-base-200/50 flex items-center justify-center gap-6">
