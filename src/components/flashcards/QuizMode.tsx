@@ -27,6 +27,7 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
     const [quizComplete, setQuizComplete] = useState(false);
     const [, setTick] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const [completedInSession, setCompletedInSession] = useState<number[]>([]);
 
     useEffect(() => {
         const interval = setInterval(() => setTick(t => t + 1), 5000);
@@ -114,6 +115,7 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
         );
 
         if (isFirstPass) {
+            setCompletedInSession(prev => [...prev, currentCard.ID]);
             updateSM2Mutation.mutate({
                 ID: currentCard.ID,
                 stats: {
@@ -189,9 +191,10 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
         return flashcards.filter(card =>
             card.nextReviewAt &&
             new Date(card.nextReviewAt) <= now &&
-            (card.repetitions || 0) > 0
+            (card.repetitions || 0) > 0 &&
+            !completedInSession.includes(card.ID)
         );
-    }, [flashcards]);
+    }, [flashcards, completedInSession]);
 
     const dueFolderNames = [...new Set(dueCards.map(c => folders.find(f => f.ID === c.folderId)?.name).filter(Boolean))];
 
@@ -219,7 +222,8 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                                     folderNames={dueFolderNames as string[]}
                                     onStart={() => handleStartQuiz('due')}
                                     onDismiss={() => {
-                                        localStorage.setItem('smartReviewDismissedUntil', (Date.now() + 40000).toString());
+                                        // 86400000 = 24 hours
+                                        localStorage.setItem('smartReviewDismissedUntil', (Date.now() + 86400000).toString());
                                         setTick(t => t + 1);
                                     }}
                                 />
