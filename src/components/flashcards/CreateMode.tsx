@@ -3,6 +3,7 @@ import FlashcardSidebar from './FlashcardSidebar';
 import FolderList from './FolderList';
 import { type Folder, type Flashcard } from "../../api/flashcards";
 
+
 interface CreateModeProps {
     flashcards: Flashcard[];
     onCreate: (card: { front: string; back: string; folderId?: number | null }) => void;
@@ -21,6 +22,7 @@ const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack, f
     const handleClearForm = () => {
         setFront("");
         setBack("");
+        setSelectedFolderId(null);
     };
 
     const handleSave = () => {

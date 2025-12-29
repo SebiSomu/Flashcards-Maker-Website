@@ -4,6 +4,7 @@ export interface User {
     UpdatedAt: string;
     DeletedAt: string | null;
     email: string;
+    smartReviewDismissedUntil?: string;
     // Password is usually not sent back to frontend for security, but preserving structure if needed
 }
 

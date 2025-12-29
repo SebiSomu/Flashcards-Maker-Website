@@ -14,15 +14,15 @@ interface QuizCardProps {
 }
 
 const QuizCard: React.FC<QuizCardProps> = React.memo(({
-                                                          card,
-                                                          folderName,
-                                                          isFlipped,
-                                                          onFlip,
-                                                          isFirstPass,
-                                                          onRate,
-                                                          onNextCard,
-                                                          onEndSession
-                                                      }) => {
+    card,
+    folderName,
+    isFlipped,
+    onFlip,
+    isFirstPass,
+    onRate,
+    onNextCard,
+    onEndSession
+}) => {
     return (
         <div className="w-full max-w-2xl [perspective:1000px]">
             <div onClick={onFlip} className="relative w-full aspect-video cursor-pointer group">
@@ -56,6 +56,8 @@ const QuizCard: React.FC<QuizCardProps> = React.memo(({
                                 </span>
                             )}
                         </div>
+
+
                         <p className="text-[20px] font-bold mb-8 leading-relaxed text-base-content/90 whitespace-pre-wrap">{card.back}</p> {/* Text mai mic, redus margin-bottom */}
 
                         {isFirstPass ? (

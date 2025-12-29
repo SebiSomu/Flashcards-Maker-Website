@@ -3,6 +3,7 @@ import FlashcardSidebar from './FlashcardSidebar';
 import FolderList from './FolderList';
 import { type Folder, type Flashcard } from "../../api/flashcards";
 
+
 interface EditModeProps {
     flashcards: Flashcard[];
     onUpdate: (card: { ID: number; front: string; back: string; folderId?: number | null }) => void;
@@ -19,6 +20,8 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
     const [editFolderId, setEditFolderId] = useState<number | null>(null);
     const [front, setFront] = useState("");
     const [back, setBack] = useState("");
+
+
 
     const handleCardClick = (card: Flashcard) => {
         setFront(card.front);
@@ -41,7 +44,7 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
             ID: selectedCardId,
             front,
             back,
-            folderId: editFolderId
+            folderId: editFolderId,
         });
     };
 

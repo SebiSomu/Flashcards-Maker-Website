@@ -15,7 +15,8 @@ import {
     deleteFlashcard,
     fetchFolders,
     createFolder,
-    deleteFolder
+    deleteFolder,
+    fetchCurrentUser
 } from "../api/flashcards";
 import type { CreateFlashcardDTO, Flashcard, Folder } from "../api/flashcards";
 
@@ -30,17 +31,23 @@ const CreateFlashcards = () => {
         return () => clearInterval(interval);
     }, []);
 
-    const dismissedUntil = parseInt(localStorage.getItem('smartReviewDismissedUntil') || '0');
-    // tick is used to force re-render every 5 seconds to update isReviewDismissed
-    // eslint-disable-next-line react-hooks/purity
-    const isReviewDismissed = (void tick, Date.now() < dismissedUntil);
-
     // Auth Token
     const token = useAuthStore((state) => state.token);
     const { showToast } = useToast();
     const queryClient = useQueryClient();
 
     // Queries
+    const { data: currentUser } = useQuery({
+        queryKey: ['me'],
+        queryFn: () => fetchCurrentUser(token || ""),
+        enabled: !!token,
+        refetchInterval: 30000 // Refresh every 30s to keep sync
+    });
+
+    const isReviewDismissed = useMemo(() => {
+        if (!currentUser?.smartReviewDismissedUntil) return false;
+        return new Date(currentUser.smartReviewDismissedUntil) > new Date();
+    }, [currentUser, tick]);
     const { data: flashcards = [], isLoading: isLoadingCards } = useQuery({
         queryKey: ['flashcards'],
         queryFn: () => fetchFlashcards(token || ""),
@@ -57,8 +64,8 @@ const CreateFlashcards = () => {
     const dueCount = useMemo(() => {
         if (isReviewDismissed) return 0;
         const now = new Date();
-        return flashcards.filter((card: Flashcard) => 
-            card.nextReviewAt && 
+        return flashcards.filter((card: Flashcard) =>
+            card.nextReviewAt &&
             new Date(card.nextReviewAt) <= now &&
             (card.repetitions || 0) > 0  // Only include cards that have been reviewed at least once
         ).length;
@@ -141,7 +148,11 @@ const CreateFlashcards = () => {
     const handleUpdateCard = (updatedCard: { ID: number; front: string; back: string; folderId?: number | null }) => {
         updateMutation.mutate({
             ID: updatedCard.ID,
-            card: { front: updatedCard.front, back: updatedCard.back, folderId: updatedCard.folderId }
+            card: {
+                front: updatedCard.front,
+                back: updatedCard.back,
+                folderId: updatedCard.folderId
+            }
         });
     };
 

@@ -85,3 +85,16 @@ export const deleteFolder = async (token: string, id: number): Promise<void> => 
         headers: { Authorization: `Bearer ${token}` }
     });
 };
+
+export const fetchCurrentUser = async (token: string): Promise<any> => {
+    const response = await axios.get("http://localhost:8080/api/me", {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
+export const dismissSmartReview = async (token: string, hours: number = 24): Promise<void> => {
+    await axios.post("http://localhost:8080/api/user/dismiss-smart-review", { hours }, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+};

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -179,14 +180,14 @@ func main() {
 			Back     string `json:"back"`
 			FolderID *uint  `json:"folderId"`
 			// SM2 Fields
-			NextReviewAt *time.Time `json:"nextReviewAt,omitempty"`
+			NextReviewAt *string    `json:"nextReviewAt,omitempty"`
 			Interval     *float64   `json:"interval,omitempty"`
 			EaseFactor   *float64   `json:"easeFactor,omitempty"`
 			Repetitions  *int       `json:"repetitions,omitempty"`
 		}
 		var updateData UpdateData
 		if err := c.BodyParser(&updateData); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid data"})
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid data: " + err.Error()})
 		}
 
 		card.Front = updateData.Front
@@ -195,7 +196,12 @@ func main() {
 
 		// Update SM2 fields if present
 		if updateData.NextReviewAt != nil {
-			card.NextReviewAt = *updateData.NextReviewAt
+			parsedTime, err := time.Parse(time.RFC3339, *updateData.NextReviewAt)
+			if err == nil {
+				card.NextReviewAt = parsedTime
+			} else {
+                fmt.Println("Error parsing time:", err)
+            }
 		}
 		if updateData.Interval != nil {
 			card.Interval = *updateData.Interval
@@ -281,5 +287,49 @@ func main() {
 		return c.Status(200).JSON(fiber.Map{"message": "Folder deleted"})
 	})
 
-	log.Fatal(app.Listen(":8080"))
-}
+	// --- User Settings API ---
+	
+		app.Post("/api/user/dismiss-smart-review", func(c *fiber.Ctx) error {
+			userID, err := getUserID(c)
+			if err != nil {
+				return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+			}
+	
+			// Request body can specify duration, or default to 24h
+			type DismissRequest struct {
+				Hours int `json:"hours"`
+			}
+			var req DismissRequest
+			// Ignore error if body is empty or invalid, default to 24
+			_ = c.BodyParser(&req)
+			if req.Hours <= 0 {
+				req.Hours = 24
+			}
+	
+			dismissUntil := time.Now().Add(time.Duration(req.Hours) * time.Hour)
+	
+			// Update user
+			if result := DB.Model(&User{}).Where("id = ?", userID).Update("smart_review_dismissed_until", dismissUntil); result.Error != nil {
+				return c.Status(500).JSON(fiber.Map{"error": "Could not update user settings"})
+			}
+	
+			return c.JSON(fiber.Map{"message": "Smart review dismissed", "until": dismissUntil})
+		})
+		
+		// Add an endpoint to get current user info including settings
+		app.Get("/api/me", func(c *fiber.Ctx) error {
+			userID, err := getUserID(c)
+			if err != nil {
+				return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+			}
+	
+			var user User
+			if result := DB.First(&user, userID); result.Error != nil {
+				return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+			}
+	
+			return c.JSON(user.ToResponse())
+		})
+	
+		log.Fatal(app.Listen(":8080"))
+	}

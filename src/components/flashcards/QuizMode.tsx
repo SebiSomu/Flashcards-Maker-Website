@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { updateFlashcard } from "../../api/flashcards";
+import { updateFlashcard, dismissSmartReview, fetchCurrentUser } from "../../api/flashcards";
 import { type Folder, type Flashcard, type CreateFlashcardDTO } from "../../api/flashcards";
 import SmartReviewCard from './SmartReviewCard';
 import QuizCard from './QuizCard';
 import QuizCompletedCard from './QuizCompletedCard';
 import QuizNavigationBar from './QuizNavigationBar';
 import { calculateSM2 } from '../../utils/sm2';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/useAuthStore';
 
 interface QuizModeProps {
@@ -25,7 +25,7 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
     const [isFirstPass, setIsFirstPass] = useState(true);
     const [repetitionQueue, setRepetitionQueue] = useState<Flashcard[]>([]);
     const [quizComplete, setQuizComplete] = useState(false);
-    const [, setTick] = useState(0);
+    const [tick, setTick] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [completedInSession, setCompletedInSession] = useState<number[]>([]);
 
@@ -34,18 +34,38 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
         return () => clearInterval(interval);
     }, []);
 
-    const dismissedUntil = parseInt(localStorage.getItem('smartReviewDismissedUntil') || '0');
-    // eslint-disable-next-line react-hooks/purity
-    const isReviewDismissed = (() => Date.now() < dismissedUntil)();
-
     const token = useAuthStore((state) => state.token);
     const queryClient = useQueryClient();
+
+    const { data: currentUser } = useQuery({
+        queryKey: ['me'],
+        queryFn: () => fetchCurrentUser(token || ""),
+        enabled: !!token,
+        refetchInterval: 30000
+    });
+
+    const isReviewDismissed = useMemo(() => {
+        if (!currentUser?.smartReviewDismissedUntil) return false;
+        return new Date(currentUser.smartReviewDismissedUntil) > new Date();
+    }, [currentUser, tick]);
+
+    const dismissMutation = useMutation({
+        mutationFn: (hours: number) => dismissSmartReview(token || "", hours),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['me'] });
+        }
+    });
 
     const updateSM2Mutation = useMutation({
         mutationFn: (data: { ID: number, stats: CreateFlashcardDTO }) =>
             updateFlashcard(token || "", data.ID, data.stats),
-        onSuccess: () => {
+        onSuccess: (_data, variables) => {
+            console.log("SM2 Updated successfully for card", variables.ID);
             return queryClient.invalidateQueries({ queryKey: ['flashcards'] });
+        },
+        onError: (error) => {
+            console.error("Failed to update SM2:", error);
+            alert("Failed to save progress for card. Please check connection.");
         }
     });
 
@@ -222,9 +242,7 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                                     folderNames={dueFolderNames as string[]}
                                     onStart={() => handleStartQuiz('due')}
                                     onDismiss={() => {
-                                        // 86400000 = 24 hours
-                                        localStorage.setItem('smartReviewDismissedUntil', (Date.now() + 86400000).toString());
-                                        setTick(t => t + 1);
+                                        dismissMutation.mutate(24);
                                     }}
                                 />
                             )}
@@ -247,11 +265,10 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                                     {folders.map(folder => (
                                         <label
                                             key={folder.ID}
-                                            className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                                                selectedFolderIds.includes(folder.ID)
-                                                    ? 'bg-base-100 border-primary/50 text-primary'
-                                                    : 'bg-base-100/50 border-base-content/10 opacity-70'
-                                            }`}
+                                            className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedFolderIds.includes(folder.ID)
+                                                ? 'bg-base-100 border-primary/50 text-primary'
+                                                : 'bg-base-100/50 border-base-content/10 opacity-70'
+                                                }`}
                                         >
                                             <input
                                                 type="checkbox"
@@ -321,11 +338,10 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                 <div className="w-full max-w-2xl relative">
                     <div
                         key={currentCardIndex}
-                        className={`transition-all duration-150 ${
-                            isTransitioning
-                                ? 'opacity-0 transform translate-y-2'
-                                : 'opacity-100 transform translate-y-0'
-                        }`}
+                        className={`transition-all duration-150 ${isTransitioning
+                            ? 'opacity-0 transform translate-y-2'
+                            : 'opacity-100 transform translate-y-0'
+                            }`}
                         style={{
                             transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
                             transitionProperty: 'opacity, transform',

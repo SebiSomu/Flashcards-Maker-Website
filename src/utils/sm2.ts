@@ -1,9 +1,9 @@
 export interface SM2Result {
-     nextReviewDate: Date;
-     interval: number;
-     easeFactor: number;
-     repetitions: number;
- }
+    nextReviewDate: Date;
+    interval: number;
+    easeFactor: number;
+    repetitions: number;
+}
 
 export const calculateSM2 = (
     userRating: number,
@@ -35,7 +35,10 @@ export const calculateSM2 = (
     if (easeFactor > 2.8) easeFactor = 2.8;
 
     const nextReviewDate = new Date();
-    const safeInterval = interval < 1 ? 1 : interval;
+    // Cap interval to 100 years (36500 days) to prevent database/parsing overflow
+    let safeInterval = interval < 1 ? 1 : interval;
+    if (safeInterval > 36500) safeInterval = 36500;
+
     nextReviewDate.setDate(nextReviewDate.getDate() + safeInterval);
     nextReviewDate.setHours(6, 0, 0, 0);
 
