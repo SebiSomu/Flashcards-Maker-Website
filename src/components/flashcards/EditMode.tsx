@@ -80,31 +80,31 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
                 }
             />
 
-            <div className="flex-1 flex flex-col bg-base-100/50 p-6 md:p-10">
+            <div className="flex-1 flex flex-col bg-base-100/50 p-6 md:p-8">
                 <div className="flex-1 flex items-center justify-center">
-                    <div className="card w-full max-w-2xl bg-base-200 shadow-xl border border-base-content/10">
+                    <div className="card w-full max-w-lg bg-base-200 shadow-xl border border-base-content/10">
                         {!selectedCardId ? (
-                            <div className="card-body p-8 md:p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
-                                <div className="w-20 h-20 bg-base-100 rounded-full flex items-center justify-center mb-6">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="card-body p-6 md:p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
+                                <div className="w-14 h-14 bg-base-100 rounded-full flex items-center justify-center mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                     </svg>
                                 </div>
-                                <h3 className="text-xl font-bold mb-2">Select a Flashcard</h3>
-                                <p className="text-base-content/60 max-w-xs">Choose a card from the sidebar to edit its content.</p>
+                                <h3 className="text-md font-bold mb-1">Select a Flashcard</h3>
+                                <p className="text-base-content/60 text-sm max-w-[180px]">Choose a card from the sidebar to edit.</p>
                             </div>
                         ) : (
-                            <div className="card-body p-8 md:p-12 animate-fade-in">
-                                <div className="flex justify-between items-center border-b border-base-content/10 pb-4 mb-8">
-                                    <h2 className="text-2xl font-black">Edit Flashcard</h2>
-                                    <div className="badge badge-outline text-xs font-bold uppercase tracking-widest p-3 badge-primary">Editing Mode</div>
+                            <div className="card-body p-6 md:p-8 animate-fade-in">
+                                <div className="flex justify-between items-center border-b border-base-content/10 pb-3.5 mb-6">
+                                    <h2 className="text-lg font-black">Edit Flashcard</h2>
+                                    <div className="badge badge-outline text-[10px] font-bold uppercase tracking-widest p-2.5 badge-primary">Editing Mode</div>
                                 </div>
 
-                                <div className="space-y-6">
+                                <div className="space-y-4">
                                     <div className="form-control w-full">
-                                        <label className="label"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Folder</span></label>
+                                        <label className="label py-1"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Folder</span></label>
                                         <select
-                                            className="select select-bordered w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none"
+                                            className="select select-bordered select-sm w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-sm"
                                             value={editFolderId || ""}
                                             onChange={(e) => setEditFolderId(e.target.value ? Number(e.target.value) : null)}
                                         >
@@ -114,18 +114,18 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
                                     </div>
 
                                     <div className="form-control w-full">
-                                        <label className="label"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Front Side</span></label>
+                                        <label className="label py-1"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Front Side</span></label>
                                         <textarea
-                                            className="textarea textarea-bordered h-20 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-base"
+                                            className="textarea textarea-bordered h-14 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-sm"
                                             value={front}
                                             onChange={(e) => setFront(e.target.value)}
                                         ></textarea>
                                     </div>
 
                                     <div className="form-control w-full">
-                                        <label className="label"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Back Side</span></label>
+                                        <label className="label py-1"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Back Side</span></label>
                                         <textarea
-                                            className="textarea textarea-bordered h-32 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-base leading-relaxed"
+                                            className="textarea textarea-bordered h-24 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-sm leading-relaxed"
                                             value={back}
                                             onChange={(e) => setBack(e.target.value)}
                                         ></textarea>

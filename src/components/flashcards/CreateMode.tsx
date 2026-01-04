@@ -62,20 +62,20 @@ const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack, f
                 }
             />
 
-            <div className="flex-1 flex flex-col bg-base-100/50 p-6 md:p-10">
+            <div className="flex-1 flex flex-col bg-base-100/50 p-6 md:p-8">
                 <div className="flex-1 flex items-center justify-center">
-                    <div className="card w-full max-w-2xl bg-base-200 shadow-xl border border-base-content/10">
-                        <div className="card-body p-8 md:p-12 animate-fade-in">
-                            <div className="flex justify-between items-center border-b border-base-content/10 pb-4 mb-8">
-                                <h2 className="text-2xl font-black">Create New Flashcard</h2>
-                                <div className="badge badge-outline text-xs font-bold uppercase tracking-widest p-3 badge-accent whitespace-nowrap">Creation Mode</div>
+                    <div className="card w-full max-w-lg bg-base-200 shadow-xl border border-base-content/10">
+                        <div className="card-body p-6 md:p-8 animate-fade-in">
+                            <div className="flex justify-between items-center border-b border-base-content/10 pb-3.5 mb-6">
+                                <h2 className="text-lg font-black">Create New Flashcard</h2>
+                                <div className="badge badge-outline text-[10px] font-bold uppercase tracking-widest p-2.5 badge-accent whitespace-nowrap">Creation Mode</div>
                             </div>
 
-                            <div className="space-y-6">
+                            <div className="space-y-4">
                                 <div className="form-control w-full">
-                                    <label className="label"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Assign to Folder</span></label>
+                                    <label className="label py-1"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Assign to Folder</span></label>
                                     <select
-                                        className="select select-bordered w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none"
+                                        className="select select-bordered select-sm w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-sm"
                                         value={selectedFolderId || ""}
                                         onChange={(e) => setSelectedFolderId(e.target.value ? Number(e.target.value) : null)}
                                     >
@@ -85,18 +85,18 @@ const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack, f
                                 </div>
 
                                 <div className="form-control w-full">
-                                    <label className="label"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Front Side</span></label>
+                                    <label className="label py-1"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Front Side</span></label>
                                     <textarea
-                                        className="textarea textarea-bordered h-20 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-base"
+                                        className="textarea textarea-bordered h-14 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-sm"
                                         value={front}
                                         onChange={(e) => setFront(e.target.value)}
                                     ></textarea>
                                 </div>
 
                                 <div className="form-control w-full">
-                                    <label className="label"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Back Side</span></label>
+                                    <label className="label py-1"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Back Side</span></label>
                                     <textarea
-                                        className="textarea textarea-bordered h-32 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-base leading-relaxed"
+                                        className="textarea textarea-bordered h-24 w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-sm leading-relaxed"
                                         value={back}
                                         onChange={(e) => setBack(e.target.value)}
                                     ></textarea>

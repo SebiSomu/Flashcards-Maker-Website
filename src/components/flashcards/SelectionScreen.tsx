@@ -44,7 +44,7 @@ const SelectionScreen: React.FC<SelectionScreenProps> = ({
                             </svg>
                         </div>
                         <h2 className="text-2xl font-bold text-base-content mb-2 group-hover:text-emerald-500 transition-colors">Create</h2>
-                        <p className="text-base-content/60">Add new flashcards to your collection quickly and efficiently.</p>
+                        <p className="text-base-content/60 leading-relaxed">Add new flashcards to your collection quickly and efficiently.</p>
                     </div>
 
                     {/* Edit Card */}
@@ -59,7 +59,7 @@ const SelectionScreen: React.FC<SelectionScreenProps> = ({
                             </svg>
                         </div>
                         <h2 className="text-2xl font-bold text-base-content mb-2 group-hover:text-blue-500 transition-colors">Edit</h2>
-                        <p className="text-base-content/60">Modify, delete or review your existing flashcards.</p>
+                        <p className="text-base-content/60 leading-relaxed">Modify, delete or review your existing flashcards.</p>
                     </div>
 
                     {/* Quiz Card */}
@@ -81,7 +81,7 @@ const SelectionScreen: React.FC<SelectionScreenProps> = ({
                             )}
                         </div>
                         <h2 className="text-2xl font-bold text-base-content mb-2 group-hover:text-purple-500 transition-colors">Quiz</h2>
-                        <p className="text-base-content/60">Test your knowledge with a randomized quiz.</p>
+                        <p className="text-base-content/60 leading-relaxed">Test your knowledge with a randomized quiz.</p>
                     </div>
                 </div>
             </div>

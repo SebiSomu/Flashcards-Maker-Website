@@ -29,15 +29,15 @@ const TreeNode = ({ folder, allFolders, level, selectedFolderId, onSelect, onDel
         <div className="flex flex-col select-none">
             <div className={`group flex items-center hover:bg-base-200/50 rounded-lg pr-2 transition-colors ${selectedFolderId === folder.ID ? "bg-primary/10 text-primary" : ""}`} style={{ paddingLeft: `${level * 12}px` }}>
                 {hasChildren ? (
-                    <button onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} className="p-1 opacity-50 hover:opacity-100">
+                    <button onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} className="p-1 opacity-50 hover:opacity-100 shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                     </button>
-                ) : <span className="w-5"></span>}
-                <button onClick={() => onSelect(folder.ID)} className={`btn btn-ghost btn-sm justify-start flex-1 text-xs font-medium truncate h-8 min-h-0 px-1 ${selectedFolderId === folder.ID ? "text-primary font-bold" : ""}`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 opacity-70" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>
-                    {folder.name}
+                ) : <span className="w-5 shrink-0"></span>}
+                <button onClick={() => onSelect(folder.ID)} className={`btn btn-ghost btn-sm justify-start flex-1 text-xs font-medium h-8 min-h-0 px-1 min-w-0 overflow-hidden ${selectedFolderId === folder.ID ? "text-primary font-bold" : ""}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 opacity-70 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>
+                    <span className="truncate">{folder.name}</span>
                 </button>
-                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                     <button onClick={(e) => { e.stopPropagation(); onCreateSubfolder(folder.ID); }} className="btn btn-ghost btn-xs text-base-content/50 hover:text-primary font-bold">+</button>
                     <button onClick={(e) => { e.stopPropagation(); onDelete(folder.ID); }} className="btn btn-ghost btn-xs text-error/50 hover:text-error font-bold">×</button>
                 </div>

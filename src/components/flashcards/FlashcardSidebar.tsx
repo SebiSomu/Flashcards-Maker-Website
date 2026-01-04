@@ -32,32 +32,32 @@ const FlashcardSidebar = ({
     const hasMoreCards = flashcards.length > INITIAL_DISPLAY_COUNT;
 
     return (
-        <div className="w-80 bg-base-200 border-r border-base-content/10 p-6 flex flex-col h-full overflow-hidden shrink-0 z-20 text-base-content">
+        <div className="w-64 bg-base-200 border-r border-base-content/10 p-4 flex flex-col h-full overflow-hidden shrink-0 z-20 text-base-content">
             <button
                 onClick={onBack}
-                className="btn btn-ghost btn-sm gap-2 text-base-content/60 hover:text-base-content self-start pl-0 mb-4 font-bold"
+                className="btn btn-ghost btn-xs gap-1.5 text-base-content/60 hover:text-base-content self-start pl-0 mb-3 font-bold"
             >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 Back to Menu
             </button>
 
             {folderSection && (
-                <div className="mb-6 pb-4 border-b border-base-content/10">
+                <div className="mb-4 pb-3 border-b border-base-content/10">
                     {folderSection}
                 </div>
             )}
 
             <div className="flex flex-col flex-1 overflow-hidden">
-                <h2 className="text-base-content font-black text-xs uppercase tracking-widest flex items-center gap-2 mb-4">
+                <h2 className="text-base-content font-black text-[10px] uppercase tracking-widest flex items-center gap-2 mb-3">
                     Your Cards
-                    <span className="text-base-content/50 text-xs">({flashcards.length})</span>
+                    <span className="text-base-content/50 text-[10px]">({flashcards.length})</span>
                 </h2>
 
-                <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto space-y-2 pr-1.5 custom-scrollbar">
                     {flashcards.length === 0 && (
-                        <p className="text-base-content/40 text-xs text-center mt-6 italic font-medium">No cards yet.</p>
+                        <p className="text-base-content/40 text-[10px] text-center mt-4 italic font-medium">No cards yet.</p>
                     )}
                     {displayedCards.map((card) => (
                         <div
@@ -66,22 +66,22 @@ const FlashcardSidebar = ({
                                 e.preventDefault();
                                 if (mode === 'edit') onCardClick(card);
                             }}
-                            className={`group relative bg-base-100 p-3 rounded-lg border transition-all ${mode === 'edit' ? 'cursor-pointer' : 'cursor-default'} ${selectedCardId === card.ID
+                            className={`group relative bg-base-100 p-2 rounded-lg border transition-all ${mode === 'edit' ? 'cursor-pointer' : 'cursor-default'} ${selectedCardId === card.ID
                                 ? "border-primary shadow-[0_0_15px_rgba(37,99,235,0.2)]"
                                 : "border-base-content/5 hover:border-base-content/20"
                                 }`}
                         >
-                            <div className="flex justify-between items-start gap-2">
+                            <div className="flex justify-between items-start gap-1.5">
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-0.5">
-                                        <h3 className="text-base-content font-bold text-xs whitespace-pre-wrap line-clamp-2">{card.front}</h3>
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                        <h3 className="text-base-content font-bold text-[10px] whitespace-pre-wrap line-clamp-2 leading-tight">{card.front}</h3>
                                         {card.folderId && folders && (
-                                            <span className="badge badge-ghost badge-outline text-[10px] h-4 px-1.5 font-bold uppercase tracking-tighter opacity-60">
+                                            <span className="badge badge-ghost badge-outline text-[9px] h-3.5 px-1 font-bold uppercase tracking-tighter opacity-60">
                                                 {folders.find(f => f.ID === card.folderId)?.name || 'Folder'}
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-base-content/70 text-xs whitespace-pre-wrap line-clamp-3">{card.back}</p>
+                                    <p className="text-base-content/70 text-[10px] whitespace-pre-wrap line-clamp-2 leading-tight">{card.back}</p>
                                 </div>
                                 {onDeleteCard && (
                                     <button
@@ -89,9 +89,9 @@ const FlashcardSidebar = ({
                                             e.stopPropagation();
                                             setCardToDelete(card.ID);
                                         }}
-                                        className="btn btn-ghost btn-xs btn-square text-base-content/20 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                        className="btn btn-ghost btn-xs btn-square text-base-content/20 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all h-5 w-5 min-h-0"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                             <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                                         </svg>
                                     </button>

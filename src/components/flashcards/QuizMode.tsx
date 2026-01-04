@@ -232,9 +232,9 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                 </div>
 
                 <div className="flex-1 flex items-center justify-center p-6 bg-base-100/30">
-                    <div className="card w-full max-w-xl bg-base-200 shadow-xl border border-base-content/10">
-                        <div className="card-body p-8">
-                            <h2 className="text-2xl font-black mb-6">Choose Your Session</h2>
+                    <div className="card w-full max-w-md bg-base-200 shadow-xl border border-base-content/10">
+                        <div className="card-body p-6">
+                            <h2 className="text-lg font-black mb-4">Choose Your Session</h2>
 
                             {dueCards.length > 0 && !isReviewDismissed && (
                                 <SmartReviewCard
@@ -247,7 +247,7 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                                 />
                             )}
 
-                            <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-3">
                                 <span className="text-xs font-bold uppercase tracking-widest text-base-content/30 text-center">
                                     Or Start a New Practice Session
                                 </span>
@@ -258,29 +258,29 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                                     4 Stars (2 reps) • 5 Stars (3 reps)
                                 </p>
 
-                                <div className="space-y-2 mb-6 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                                    <span className="text-xs font-bold uppercase tracking-widest text-base-content/50 block mb-2">
+                                <div className="space-y-2 mb-3 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
+                                    <span className="text-xs font-bold uppercase tracking-widest text-base-content/50 block mb-1">
                                         Select Folders (Optional)
                                     </span>
                                     {folders.map(folder => (
                                         <label
                                             key={folder.ID}
-                                            className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedFolderIds.includes(folder.ID)
+                                            className={`flex items-center gap-2 p-2 rounded-xl border cursor-pointer transition-all ${selectedFolderIds.includes(folder.ID)
                                                 ? 'bg-base-100 border-primary/50 text-primary'
                                                 : 'bg-base-100/50 border-base-content/10 opacity-70'
                                                 }`}
                                         >
                                             <input
                                                 type="checkbox"
-                                                className="checkbox checkbox-primary checkbox-sm"
+                                                className="checkbox checkbox-primary checkbox-xs h-3.5 w-3.5"
                                                 checked={selectedFolderIds.includes(folder.ID)}
                                                 onChange={() => toggleFolder(folder.ID)}
                                             />
-                                            <span className="font-medium">{folder.name}</span>
+                                            <span className="font-medium text-sm">{folder.name}</span>
                                         </label>
                                     ))}
                                     {folders.length === 0 && (
-                                        <p className="text-base-content/40 text-sm italic">
+                                        <p className="text-base-content/40 text-[10px] italic">
                                             No folders. All cards will be included.
                                         </p>
                                     )}
