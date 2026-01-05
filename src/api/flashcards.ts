@@ -37,6 +37,10 @@ export interface CreateFolderDTO {
     parentId?: number | null;
 }
 
+export interface UpdateFolderDTO {
+    name: string;
+}
+
 export const fetchFlashcards = async (token: string): Promise<Flashcard[]> => {
     const response = await axios.get(API_URL, {
         headers: { Authorization: `Bearer ${token}` }
@@ -75,6 +79,13 @@ export const fetchFolders = async (token: string): Promise<Folder[]> => {
 
 export const createFolder = async (token: string, folder: CreateFolderDTO): Promise<Folder> => {
     const response = await axios.post(FOLDER_API_URL, folder, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
+export const updateFolder = async (token: string, id: number, data: UpdateFolderDTO): Promise<Folder> => {
+    const response = await axios.put(`${FOLDER_API_URL}/${id}`, data, {
         headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;

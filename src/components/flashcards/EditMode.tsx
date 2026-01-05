@@ -12,14 +12,16 @@ interface EditModeProps {
     folders: Folder[];
     onCreateFolder: (name: string, parentId?: number | null) => void;
     onDeleteFolder: (ID: number) => void;
+    onEditFolder: (ID: number, newName: string) => void;
 }
 
-const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onBack, folders, onCreateFolder, onDeleteFolder }) => {
+const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onBack, folders, onCreateFolder, onDeleteFolder, onEditFolder }) => {
     const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
     const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
     const [editFolderId, setEditFolderId] = useState<number | null>(null);
     const [front, setFront] = useState("");
     const [back, setBack] = useState("");
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
 
 
@@ -76,6 +78,7 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
                         onSelectFolder={setSelectedFolderId}
                         onCreateFolder={onCreateFolder}
                         onDeleteFolder={onDeleteFolder}
+                        onEditFolder={onEditFolder}
                     />
                 }
             />
@@ -103,14 +106,53 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
                                 <div className="space-y-4">
                                     <div className="form-control w-full">
                                         <label className="label py-1"><span className="label-text text-base-content/60 text-xs uppercase font-bold tracking-widest">Folder</span></label>
-                                        <select
-                                            className="select select-bordered select-sm w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-sm"
-                                            value={editFolderId || ""}
-                                            onChange={(e) => setEditFolderId(e.target.value ? Number(e.target.value) : null)}
-                                        >
-                                            <option value="">(Uncategorized)</option>
-                                            {folders.map(folder => (<option key={folder.ID} value={folder.ID}>{folder.name}</option>))}
-                                        </select>
+                                        <div className="relative w-full">
+                                            <div
+                                                role="button"
+                                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                                className="select select-bordered select-sm w-full bg-base-100 border-base-content/10 text-base-content focus:border-primary focus:outline-none text-sm flex items-center justify-between"
+                                            >
+                                                <span>{editFolderId ? folders.find(f => f.ID === editFolderId)?.name : "(Uncategorized)"}</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 opacity-50" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                                            </div>
+
+                                            {isDropdownOpen && (
+                                                <>
+                                                    <div
+                                                        className="fixed inset-0 z-[50]"
+                                                        onClick={() => setIsDropdownOpen(false)}
+                                                    ></div>
+                                                    <ul className="absolute left-0 top-full mt-1 z-[60] p-1 shadow-2xl bg-base-200 border border-base-content/10 rounded-xl w-full max-h-[160px] overflow-y-auto flex flex-col gap-1">
+                                                        <li>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setEditFolderId(null);
+                                                                    setIsDropdownOpen(false);
+                                                                }}
+                                                                className={`w-full text-left px-4 py-2 rounded-lg text-sm hover:bg-primary/10 transition-colors ${!editFolderId ? 'bg-primary/20 font-bold' : ''}`}
+                                                            >
+                                                                (Uncategorized)
+                                                            </button>
+                                                        </li>
+                                                        {folders.map(folder => (
+                                                            <li key={folder.ID}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setEditFolderId(folder.ID);
+                                                                        setIsDropdownOpen(false);
+                                                                    }}
+                                                                    className={`w-full text-left px-4 py-2 rounded-lg text-sm hover:bg-primary/10 transition-colors ${editFolderId === folder.ID ? 'bg-primary/20 font-bold' : ''}`}
+                                                                >
+                                                                    {folder.name}
+                                                                </button>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="form-control w-full">

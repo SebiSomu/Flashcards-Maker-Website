@@ -268,6 +268,32 @@ func main() {
 		return c.Status(201).JSON(folder)
 	})
 
+	app.Put("/api/folders/:id", func(c *fiber.Ctx) error {
+		userID, err := getUserID(c)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+
+		id := c.Params("id")
+		var folder Folder
+		if result := DB.Where("id = ? AND user_id = ?", id, userID).First(&folder); result.Error != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "Folder not found or access denied"})
+		}
+
+		type UpdateData struct {
+			Name string `json:"name"`
+		}
+		var updateData UpdateData
+		if err := c.BodyParser(&updateData); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid data"})
+		}
+
+		folder.Name = updateData.Name
+		DB.Save(&folder)
+
+		return c.JSON(folder)
+	})
+
 	app.Delete("/api/folders/:id", func(c *fiber.Ctx) error {
 		userID, err := getUserID(c)
 		if err != nil {

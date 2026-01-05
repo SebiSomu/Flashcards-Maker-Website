@@ -15,6 +15,7 @@ import {
     deleteFlashcard,
     fetchFolders,
     createFolder,
+    updateFolder,
     deleteFolder,
     fetchCurrentUser
 } from "../api/flashcards";
@@ -94,6 +95,15 @@ const CreateFlashcards = () => {
             showToast("Folder and its cards deleted!", 'info');
         },
         onError: () => showToast("Failed to delete folder content.", 'error')
+    });
+
+    const updateFolderMutation = useMutation({
+        mutationFn: (data: { ID: number; name: string }) => updateFolder(token || "", data.ID, { name: data.name }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['folders'] });
+            showToast("Folder Renamed!", 'success');
+        },
+        onError: () => showToast("Failed to rename folder.", 'error')
     });
 
     // Mutations
@@ -195,6 +205,7 @@ const CreateFlashcards = () => {
                         folders={folders}
                         onCreateFolder={(name, parentId) => createFolderMutation.mutate({ name, parentId: parentId || null })}
                         onDeleteFolder={(ID) => deleteFolderMutation.mutate(ID)}
+                        onEditFolder={(ID, newName) => updateFolderMutation.mutate({ ID, name: newName })}
                         onDelete={handleDeleteCard}
                     />
                 )}
@@ -208,6 +219,7 @@ const CreateFlashcards = () => {
                         folders={folders}
                         onCreateFolder={(name, parentId) => createFolderMutation.mutate({ name, parentId: parentId || null })}
                         onDeleteFolder={(ID) => deleteFolderMutation.mutate(ID)}
+                        onEditFolder={(ID, newName) => updateFolderMutation.mutate({ ID, name: newName })}
                     />
                 )}
 

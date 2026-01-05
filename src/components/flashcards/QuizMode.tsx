@@ -3,7 +3,7 @@ import { updateFlashcard, dismissSmartReview, fetchCurrentUser } from "../../api
 import { type Folder, type Flashcard, type CreateFlashcardDTO } from "../../api/flashcards";
 import SmartReviewCard from './SmartReviewCard';
 import QuizCard from './QuizCard';
-import QuizCompletedCard from './QuizCompletedCard';
+import InfoModal from '../InfoModal';
 import QuizNavigationBar from './QuizNavigationBar';
 import { calculateSM2 } from '../../utils/sm2';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -28,6 +28,7 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
     const [tick, setTick] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [completedInSession, setCompletedInSession] = useState<number[]>([]);
+    const [emptyFolderModal, setEmptyFolderModal] = useState(false);
 
     useEffect(() => {
         const interval = setInterval(() => setTick(t => t + 1), 5000);
@@ -112,7 +113,7 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
         }
 
         if (cardsToQuiz.length === 0) {
-            alert("No scheduled cards found.");
+            setEmptyFolderModal(true);
             return;
         }
 
@@ -296,18 +297,39 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
                         </div>
                     </div>
                 </div>
+
+                <InfoModal
+                    isOpen={emptyFolderModal}
+                    onClose={() => setEmptyFolderModal(false)}
+                    title="No Cards Found"
+                    message="The selected folder is empty or no cards match your criteria. Try selecting a different folder or add some cards first."
+                    type="warning"
+                />
             </div>
         );
     }
 
+    // Final Quiz Completion View
     if (quizComplete) {
         return (
-            <QuizCompletedCard
-                quizType={quizType}
-                onBack={onBack}
-                onNewSession={() => {
-                    setQuizComplete(false);
-                    setQuizStarted(false);
+            <InfoModal
+                isOpen={true}
+                isFullPage={true}
+                onClose={onBack}
+                type="success"
+                icon="🎉"
+                title={quizType === 'due' ? 'Smart Review Complete!' : 'Quiz Complete!'}
+                message={quizType === 'due'
+                    ? "Great job! You've reviewed all your due cards. Your memory is getting stronger!"
+                    : "Excellent work! You've completed this practice session successfully."
+                }
+                buttonText="Return to Dashboard"
+                secondaryButton={{
+                    text: "Start New Session",
+                    onClick: () => {
+                        setQuizComplete(false);
+                        setQuizStarted(false);
+                    }
                 }}
             />
         );
