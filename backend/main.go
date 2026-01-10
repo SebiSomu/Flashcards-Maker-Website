@@ -3,19 +3,48 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"regexp"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("Warning: No .env file found, using system environment variables")
+	}
+
 	ConnectDatabase()
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "secret"
+	}
+
 	app := fiber.New()
-	app.Use(cors.New())
+	app.Use(helmet.New())
+
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOrigins == "" {
+		allowedOrigins = "*"
+	}
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: allowedOrigins,
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+	}))
+
+	app.Use(limiter.New(limiter.Config{
+		Max:               20,
+		Expiration:        30 * time.Second,
+		LimiterMiddleware: limiter.FixedWindow{},
+	}))
 
 	app.Get("/api/health", func(c *fiber.Ctx) error {
 		return c.SendString("User Service is up and running!")
@@ -28,13 +57,24 @@ func main() {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid request payload"})
 		}
 
-		// Hash the password
+		if req.Email == "" || req.Password == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "Email and password are required"})
+		}
+
+		emailRegex := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+		if !emailRegex.MatchString(req.Email) {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid email format"})
+		}
+
+		if len(req.Password) < 6 {
+			return c.Status(400).JSON(fiber.Map{"error": "Password must be at least 6 characters long"})
+		}
+
 		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Could not hash password"})
 		}
 
-		// Create user with hashed password
 		user := User{
 			Email:    req.Email,
 			Password: string(hash),
@@ -44,13 +84,12 @@ func main() {
 			return c.Status(500).JSON(fiber.Map{"error": "Registration failed: email already exists or server error"})
 		}
 
-		// Generate JWT token
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"sub": user.ID,
 			"exp": time.Now().Add(time.Hour * 24).Unix(),
 		})
 
-		t, err := token.SignedString([]byte("secret"))
+		t, err := token.SignedString([]byte(jwtSecret))
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Could not generate token"})
 		}
@@ -73,18 +112,16 @@ func main() {
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 		}
 
-		// Compare hashed password
 		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 		}
 
-		// Generate JWT token
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"sub": user.ID,
 			"exp": time.Now().Add(time.Hour * 24).Unix(),
 		})
 
-		t, err := token.SignedString([]byte("secret"))
+		t, err := token.SignedString([]byte(jwtSecret))
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Could not generate token"})
 		}
@@ -95,9 +132,6 @@ func main() {
 		})
 	})
 
-	// --- Flashcards API ---
-
-	// Middleware/Helper to get User ID from Token
 	getUserID := func(c *fiber.Ctx) (uint, error) {
 		authHeader := c.Get("Authorization")
 		if authHeader == "" || len(authHeader) < 7 || authHeader[:7] != "Bearer " {
@@ -109,7 +143,7 @@ func main() {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fiber.NewError(fiber.StatusUnauthorized, "Unexpected signing method")
 			}
-			return []byte("secret"), nil
+			return []byte(jwtSecret), nil
 		})
 
 		if err != nil || !token.Valid {
@@ -142,6 +176,8 @@ func main() {
 
 		return c.JSON(flashcards)
 	})
+
+	// flashcard CRUD endpoints
 
 	app.Post("/api/flashcards", func(c *fiber.Ctx) error {
 		userID, err := getUserID(c)
@@ -179,11 +215,11 @@ func main() {
 			Front    string `json:"front"`
 			Back     string `json:"back"`
 			FolderID *uint  `json:"folderId"`
-			// SM2 Fields
-			NextReviewAt *string    `json:"nextReviewAt,omitempty"`
-			Interval     *float64   `json:"interval,omitempty"`
-			EaseFactor   *float64   `json:"easeFactor,omitempty"`
-			Repetitions  *int       `json:"repetitions,omitempty"`
+
+			NextReviewAt *string  `json:"nextReviewAt,omitempty"`
+			Interval     *float64 `json:"interval,omitempty"`
+			EaseFactor   *float64 `json:"easeFactor,omitempty"`
+			Repetitions  *int     `json:"repetitions,omitempty"`
 		}
 		var updateData UpdateData
 		if err := c.BodyParser(&updateData); err != nil {
@@ -194,14 +230,13 @@ func main() {
 		card.Back = updateData.Back
 		card.FolderID = updateData.FolderID
 
-		// Update SM2 fields if present
 		if updateData.NextReviewAt != nil {
 			parsedTime, err := time.Parse(time.RFC3339, *updateData.NextReviewAt)
 			if err == nil {
 				card.NextReviewAt = parsedTime
 			} else {
-                fmt.Println("Error parsing time:", err)
-            }
+				fmt.Println("Error parsing time:", err)
+			}
 		}
 		if updateData.Interval != nil {
 			card.Interval = *updateData.Interval
@@ -214,7 +249,6 @@ func main() {
 		}
 
 		DB.Save(&card)
-
 		return c.JSON(card)
 	})
 
@@ -235,7 +269,7 @@ func main() {
 		return c.Status(200).JSON(fiber.Map{"message": "Deleted successfully"})
 	})
 
-	// --- Folder API ---
+	// --- Folder Management API ---
 
 	app.Get("/api/folders", func(c *fiber.Ctx) error {
 		userID, err := getUserID(c)
@@ -306,7 +340,6 @@ func main() {
 			return c.Status(404).JSON(fiber.Map{"error": "Folder not found or access denied"})
 		}
 
-		// Set flashcard folder_id to null for cards in this folder
 		DB.Model(&Flashcard{}).Where("folder_id = ?", folder.ID).Update("folder_id", nil)
 
 		DB.Unscoped().Delete(&folder)
@@ -314,48 +347,48 @@ func main() {
 	})
 
 	// --- User Settings API ---
-	
-		app.Post("/api/user/dismiss-smart-review", func(c *fiber.Ctx) error {
-			userID, err := getUserID(c)
-			if err != nil {
-				return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
-			}
-	
-			// Request body can specify duration, or default to 24h
-			type DismissRequest struct {
-				Hours int `json:"hours"`
-			}
-			var req DismissRequest
-			// Ignore error if body is empty or invalid, default to 24
-			_ = c.BodyParser(&req)
-			if req.Hours <= 0 {
-				req.Hours = 24
-			}
-	
-			dismissUntil := time.Now().Add(time.Duration(req.Hours) * time.Hour)
-	
-			// Update user
-			if result := DB.Model(&User{}).Where("id = ?", userID).Update("smart_review_dismissed_until", dismissUntil); result.Error != nil {
-				return c.Status(500).JSON(fiber.Map{"error": "Could not update user settings"})
-			}
-	
-			return c.JSON(fiber.Map{"message": "Smart review dismissed", "until": dismissUntil})
-		})
-		
-		// Add an endpoint to get current user info including settings
-		app.Get("/api/me", func(c *fiber.Ctx) error {
-			userID, err := getUserID(c)
-			if err != nil {
-				return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
-			}
-	
-			var user User
-			if result := DB.First(&user, userID); result.Error != nil {
-				return c.Status(404).JSON(fiber.Map{"error": "User not found"})
-			}
-	
-			return c.JSON(user.ToResponse())
-		})
-	
-		log.Fatal(app.Listen(":8080"))
+
+	app.Post("/api/user/dismiss-smart-review", func(c *fiber.Ctx) error {
+		userID, err := getUserID(c)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+
+		type DismissRequest struct {
+			Hours int `json:"hours"`
+		}
+		var req DismissRequest
+		_ = c.BodyParser(&req)
+		if req.Hours <= 0 {
+			req.Hours = 24
+		}
+
+		dismissUntil := time.Now().Add(time.Duration(req.Hours) * time.Hour)
+
+		if result := DB.Model(&User{}).Where("id = ?", userID).Update("smart_review_dismissed_until", dismissUntil); result.Error != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Could not update user settings"})
+		}
+
+		return c.JSON(fiber.Map{"message": "Smart review dismissed", "until": dismissUntil})
+	})
+
+	app.Get("/api/me", func(c *fiber.Ctx) error {
+		userID, err := getUserID(c)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+
+		var user User
+		if result := DB.First(&user, userID); result.Error != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+		}
+
+		return c.JSON(user.ToResponse())
+	})
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
 	}
+	log.Fatal(app.Listen(":" + port))
+}

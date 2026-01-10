@@ -23,8 +23,6 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
     const [back, setBack] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-
-
     const handleCardClick = (card: Flashcard) => {
         setFront(card.front);
         setBack(card.back);
@@ -56,7 +54,6 @@ const EditMode: React.FC<EditModeProps> = ({ flashcards, onUpdate, onDelete, onB
         handleClearForm();
     };
 
-    // Filter flashcards based on selected folder
     const filteredFlashcards = flashcards.filter(card =>
         selectedFolderId === null || card.folderId === selectedFolderId
     );

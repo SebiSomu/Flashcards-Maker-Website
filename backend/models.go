@@ -1,20 +1,21 @@
 package main
 
 import (
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type User struct {
 	gorm.Model
-	Email    string `gorm:"unique;not null" json:"email"`
-	Password string `gorm:"not null" json:"-"`
+	Email                     string     `gorm:"unique;not null" json:"email"`
+	Password                  string     `gorm:"not null" json:"-"`
 	SmartReviewDismissedUntil *time.Time `json:"smartReviewDismissedUntil"`
 }
 
 type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
+	Password string `json:"password" binding:"required,min=6"`
 }
 
 type LoginRequest struct {
@@ -32,26 +33,24 @@ type UserResponse struct {
 
 type Folder struct {
 	gorm.Model
-	Name     string    `json:"name"`
-	UserID   uint      `json:"userId"`
-	ParentID *uint     `json:"parentId"`
-	Children []Folder  `gorm:"foreignkey:ParentID" json:"children,omitempty"`
+	Name     string   `json:"name"`
+	UserID   uint     `json:"userId"`
+	ParentID *uint    `json:"parentId"`
+	Children []Folder `gorm:"foreignkey:ParentID" json:"children,omitempty"`
 }
 
 type Flashcard struct {
 	gorm.Model
-	Front          string    `json:"front"`
-	Back           string    `json:"back"`
-	UserID         uint      `json:"userId"`
-	FolderID       *uint     `json:"folderId"`
+	Front    string `json:"front"`
+	Back     string `json:"back"`
+	UserID   uint   `json:"userId"`
+	FolderID *uint  `json:"folderId"`
 
-	// SM2 Fields
-	NextReviewAt   time.Time `json:"nextReviewAt"`
-	Interval       float64   `json:"interval"` // Days
-	EaseFactor     float64   `json:"easeFactor"`
-	Repetitions    int       `json:"repetitions"`
+	NextReviewAt time.Time `json:"nextReviewAt"`
+	Interval     float64   `json:"interval"` // Days
+	EaseFactor   float64   `json:"easeFactor"`
+	Repetitions  int       `json:"repetitions"`
 }
-
 
 func (u *User) ToResponse() UserResponse {
 	return UserResponse{

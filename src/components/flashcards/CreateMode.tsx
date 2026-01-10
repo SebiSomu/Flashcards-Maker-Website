@@ -38,7 +38,6 @@ const CreateMode: React.FC<CreateModeProps> = ({ flashcards, onCreate, onBack, f
         handleClearForm();
     };
 
-    // Filter flashcards for sidebar based on selected folder
     const filteredFlashcards = flashcards.filter(card =>
         selectedFolderId === null || card.folderId === selectedFolderId
     );

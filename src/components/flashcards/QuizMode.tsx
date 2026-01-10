@@ -309,7 +309,6 @@ const QuizMode: React.FC<QuizModeProps> = ({ flashcards, folders, onBack }) => {
         );
     }
 
-    // Final Quiz Completion View
     if (quizComplete) {
         return (
             <InfoModal

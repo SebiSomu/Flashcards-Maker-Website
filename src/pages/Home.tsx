@@ -18,7 +18,6 @@ const Home = () => {
     const { token } = useAuthStore();
     const navigate = useNavigate();
 
-    // Check for session on mount
     useEffect(() => {
         if (token) {
             navigate('/create');

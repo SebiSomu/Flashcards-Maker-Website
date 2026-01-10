@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 interface QuizNavigationBarProps {
     currentCardIndex: number;
@@ -10,42 +10,37 @@ interface QuizNavigationBarProps {
 }
 
 const QuizNavigationBar: React.FC<QuizNavigationBarProps> = ({
-                                                                 currentCardIndex,
-                                                                 totalCards,
-                                                                 onPrevCard,
-                                                                 onNextCard,
-                                                                 quizType,
-                                                                 isFirstPass
-                                                             }) => {
+    currentCardIndex,
+    totalCards,
+    onPrevCard,
+    onNextCard,
+    quizType,
+    isFirstPass
+}) => {
     const MAX_VISIBLE_DOTS = 5;
-    const [visibleRange, setVisibleRange] = useState({ start: 0, end: MAX_VISIBLE_DOTS - 1 });
 
-    // Actualizăm intervalul vizibil când se schimbă indexul curent
-    useEffect(() => {
-        if (totalCards <= MAX_VISIBLE_DOTS) {
-            setVisibleRange({ start: 0, end: totalCards - 1 });
-            return;
-        }
+    let start = 0;
+    let end = 0;
 
-        // Determinăm centrul intervalului
-        let start = currentCardIndex - Math.floor(MAX_VISIBLE_DOTS / 2);
-        let end = start + MAX_VISIBLE_DOTS - 1;
+    if (totalCards <= MAX_VISIBLE_DOTS) {
+        start = 0;
+        end = Math.max(0, totalCards - 1);
+    } else {
+        start = currentCardIndex - Math.floor(MAX_VISIBLE_DOTS / 2);
+        end = start + MAX_VISIBLE_DOTS - 1;
 
-        // Ajustăm la început
         if (start < 0) {
             start = 0;
             end = MAX_VISIBLE_DOTS - 1;
         }
-        // Ajustăm la sfârșit
         else if (end >= totalCards) {
             end = totalCards - 1;
             start = end - MAX_VISIBLE_DOTS + 1;
         }
+    }
 
-        setVisibleRange({ start, end });
-    }, [currentCardIndex, totalCards]);
+    const visibleRange = { start, end };
 
-    // Generăm punctele vizibile
     const visibleDots = [];
     for (let i = visibleRange.start; i <= visibleRange.end; i++) {
         const isCurrent = i === currentCardIndex;
@@ -63,11 +58,10 @@ const QuizNavigationBar: React.FC<QuizNavigationBarProps> = ({
             <button
                 onClick={onPrevCard}
                 disabled={currentCardIndex === 0}
-                className={`btn btn-circle btn-outline btn-sm transition-all duration-200 ${
-                    currentCardIndex === 0
-                        ? 'opacity-5 cursor-not-allowed'
-                        : 'opacity-40 hover:opacity-100 hover:scale-110 active:scale-95'
-                }`}
+                className={`btn btn-circle btn-outline btn-sm transition-all duration-200 ${currentCardIndex === 0
+                    ? 'opacity-5 cursor-not-allowed'
+                    : 'opacity-40 hover:opacity-100 hover:scale-110 active:scale-95'
+                    }`}
                 aria-label="Previous card"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -80,13 +74,12 @@ const QuizNavigationBar: React.FC<QuizNavigationBarProps> = ({
                     {visibleDots.map((dot) => (
                         <div
                             key={dot.index}
-                            className={`h-1 rounded-full transition-all duration-300 ${
-                                dot.isCurrent
-                                    ? 'w-4 bg-primary shadow-lg shadow-primary/30' // Mai scurt decât înainte
-                                    : dot.isPast
-                                        ? 'w-1 bg-primary/40'
-                                        : 'w-1 bg-base-content/10 hover:bg-base-content/20'
-                            }`}
+                            className={`h-1 rounded-full transition-all duration-300 ${dot.isCurrent
+                                ? 'w-4 bg-primary shadow-lg shadow-primary/30' // Mai scurt decât înainte
+                                : dot.isPast
+                                    ? 'w-1 bg-primary/40'
+                                    : 'w-1 bg-base-content/10 hover:bg-base-content/20'
+                                }`}
                             title={`Card ${dot.index + 1} / ${totalCards}`}
                         />
                     ))}
@@ -97,9 +90,8 @@ const QuizNavigationBar: React.FC<QuizNavigationBarProps> = ({
                         {currentCardIndex + 1} / {totalCards}
                     </span>
                     <span className="h-2 w-2 rounded-full bg-base-content/10"></span>
-                    <span className={`uppercase tracking-wider ${
-                        quizType === 'due' ? 'text-green-500/70' : 'text-blue-500/70'
-                    }`}>
+                    <span className={`uppercase tracking-wider ${quizType === 'due' ? 'text-green-500/70' : 'text-blue-500/70'
+                        }`}>
                         {isFirstPass ? 'First Pass' : 'Review Pass'}
                     </span>
                     <span className="h-2 w-2 rounded-full bg-base-content/10"></span>
@@ -112,11 +104,10 @@ const QuizNavigationBar: React.FC<QuizNavigationBarProps> = ({
             <button
                 onClick={onNextCard}
                 disabled={currentCardIndex === totalCards - 1}
-                className={`btn btn-circle btn-primary btn-sm transition-all duration-200 ${
-                    currentCardIndex === totalCards - 1
-                        ? 'opacity-5 cursor-not-allowed'
-                        : 'shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 hover:scale-110 active:scale-95'
-                }`}
+                className={`btn btn-circle btn-primary btn-sm transition-all duration-200 ${currentCardIndex === totalCards - 1
+                    ? 'opacity-5 cursor-not-allowed'
+                    : 'shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 hover:scale-110 active:scale-95'
+                    }`}
                 aria-label="Next card"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

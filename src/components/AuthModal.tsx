@@ -1,9 +1,11 @@
-import { useRef, useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { useAuthStore } from "../store/useAuthStore";
 import type { LoginResponse } from "../types";
+
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 interface LoginCredentials {
     email?: string;
@@ -19,8 +21,10 @@ interface LoginModalProps {
 const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModalProps) => {
     const [mode, setMode] = useState<'login' | 'register'>(defaultMode);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const emailRef = useRef<HTMLInputElement>(null);
-    const passwordRef = useRef<HTMLInputElement>(null);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [showEmailError, setShowEmailError] = useState(false);
+    const [showPasswordError, setShowPasswordError] = useState(false);
     const navigate = useNavigate();
     const setAuth = useAuthStore((state) => state.setAuth);
 
@@ -31,12 +35,16 @@ const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModalProps)
     useEffect(() => {
         if (isOpen) {
             setErrorMessage(null);
+            setEmail("");
+            setPassword("");
+            setShowEmailError(false);
+            setShowPasswordError(false);
         }
     }, [isOpen]);
 
     const loginMutation = useMutation<LoginResponse, Error, LoginCredentials>({
         mutationFn: async (credentials) => {
-            const response = await axios.post<LoginResponse>("http://localhost:8080/api/login", credentials);
+            const response = await axios.post<LoginResponse>(`${BASE_URL}/api/login`, credentials);
             return response.data;
         },
         onSuccess: (data) => {
@@ -52,7 +60,7 @@ const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModalProps)
 
     const registerMutation = useMutation<unknown, Error, LoginCredentials>({
         mutationFn: async (credentials) => {
-            const response = await axios.post("http://localhost:8080/api/register", credentials);
+            const response = await axios.post(`${BASE_URL}/api/register`, credentials);
             return response.data;
         },
         onSuccess: (_, variables) => {
@@ -60,18 +68,44 @@ const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModalProps)
             // Auto-login after successful registration
             loginMutation.mutate(variables);
         },
-        onError: () => {
-            setErrorMessage("Registration failed. Email might be in use.");
+        onError: (err) => {
+            if (axios.isAxiosError(err) && err.response?.data?.error) {
+                setErrorMessage(err.response.data.error);
+            } else {
+                setErrorMessage("Registration failed. Please check your details.");
+            }
         }
     });
 
     const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault();
         setErrorMessage(null);
+        setShowEmailError(false);
+        setShowPasswordError(false);
+
+        let hasError = false;
+
+        if (!email || !email.includes('@')) {
+            setShowEmailError(true);
+            setErrorMessage(email ? "Invalid email format" : "Email is required");
+            hasError = true;
+        }
+
+        if (!password || (mode === 'register' && password.length < 6)) {
+            setShowPasswordError(true);
+            if (!password) {
+                setErrorMessage("Password is required");
+            } else if (mode === 'register') {
+                setErrorMessage("Password is too short (min. 6 characters)");
+            }
+            hasError = true;
+        }
+
+        if (hasError) return;
 
         const data = {
-            email: emailRef.current?.value,
-            password: passwordRef.current?.value
+            email: email,
+            password: password
         };
 
         if (mode === 'login') {
@@ -123,24 +157,43 @@ const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModalProps)
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-3">
+                <form onSubmit={handleSubmit} className="space-y-3" noValidate>
                     <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase tracking-widest text-base-content/40 ml-1">Email</label>
+                        <label className={`text-[9px] font-black uppercase tracking-widest transition-colors ml-1 ${showEmailError ? 'text-red-500' : 'text-base-content/40'}`}>
+                            Email
+                        </label>
                         <input
-                            ref={emailRef}
                             type="email"
-                            className="input input-sm input-bordered w-full bg-base-100 focus:outline-none focus:border-primary text-xs"
+                            value={email}
+                            onChange={(e) => {
+                                setEmail(e.target.value);
+                                if (showEmailError) setShowEmailError(false);
+                            }}
+                            className={`input input-sm input-bordered w-full bg-base-100 focus:outline-none text-xs transition-all ${showEmailError ? 'border-red-500 focus:border-red-500' : 'focus:border-primary'}`}
                             placeholder="hello@example.com"
                             required
                         />
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase tracking-widest text-base-content/40 ml-1">Password</label>
+                        <div className="flex justify-between items-center ml-1">
+                            <label className={`text-[9px] font-black uppercase tracking-widest transition-colors ${showPasswordError ? 'text-red-500' : password.length >= 6 ? 'text-green-500' : 'text-base-content/40'}`}>
+                                Password
+                            </label>
+                            {mode === 'register' && (
+                                <span className={`text-[8px] font-bold uppercase ${showPasswordError ? 'text-red-500' : password.length >= 6 ? 'text-green-500' : 'text-base-content/30'}`}>
+                                    {password.length}/6
+                                </span>
+                            )}
+                        </div>
                         <input
-                            ref={passwordRef}
                             type="password"
-                            className="input input-sm input-bordered w-full bg-base-100 focus:outline-none focus:border-primary text-xs"
+                            value={password}
+                            onChange={(e) => {
+                                setPassword(e.target.value);
+                                if (showPasswordError) setShowPasswordError(false);
+                            }}
+                            className={`input input-sm input-bordered w-full bg-base-100 focus:outline-none text-xs transition-all ${showPasswordError ? 'border-red-500 focus:border-red-500' : password.length >= 6 && mode === 'register' ? 'border-green-500/50 focus:border-green-500' : 'focus:border-primary'}`}
                             placeholder="••••••••"
                             required
                         />
@@ -160,6 +213,10 @@ const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModalProps)
                             onClick={() => {
                                 setMode(isLogin ? 'register' : 'login');
                                 setErrorMessage(null);
+                                setEmail("");
+                                setPassword("");
+                                setShowEmailError(false);
+                                setShowPasswordError(false);
                             }}
                         >
                             {isLogin ? "Create an account" : "Back to Login"}

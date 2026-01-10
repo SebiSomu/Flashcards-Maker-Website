@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import CreateFlashcards from "./pages/CreateFlashcards";
 import ThemeToggle from "./components/ThemeToggle";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 
 const App = () => {
@@ -10,7 +11,9 @@ const App = () => {
             <ThemeToggle />
             <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/create" element={<CreateFlashcards />} />
+                <Route element={<ProtectedRoute />}>
+                    <Route path="/create" element={<CreateFlashcards />} />
+                </Route>
             </Routes>
         </>
     );

@@ -22,27 +22,23 @@ import {
 import type { CreateFlashcardDTO, Flashcard, Folder } from "../api/flashcards";
 
 const CreateFlashcards = () => {
-    // Mode state: 'selection' | 'create' | 'edit' | 'quiz'
     const [mode, setMode] = useState<'selection' | 'create' | 'edit' | 'quiz'>('selection');
 
-    // Timer for auto-refreshing due cards
     const [tick, setTick] = useState(0);
     useEffect(() => {
         const interval = setInterval(() => setTick(t => t + 1), 5000);
         return () => clearInterval(interval);
     }, []);
 
-    // Auth Token
     const token = useAuthStore((state) => state.token);
     const { showToast } = useToast();
     const queryClient = useQueryClient();
 
-    // Queries
     const { data: currentUser } = useQuery({
         queryKey: ['me'],
         queryFn: () => fetchCurrentUser(token || ""),
         enabled: !!token,
-        refetchInterval: 30000 // Refresh every 30s to keep sync
+        refetchInterval: 30000
     });
 
     const isReviewDismissed = useMemo(() => {
@@ -61,18 +57,16 @@ const CreateFlashcards = () => {
         enabled: !!token,
     });
 
-    // Calculate due count - only cards that have been reviewed at least once and are due after interval
     const dueCount = useMemo(() => {
         if (isReviewDismissed) return 0;
         const now = new Date();
         return flashcards.filter((card: Flashcard) =>
             card.nextReviewAt &&
             new Date(card.nextReviewAt) <= now &&
-            (card.repetitions || 0) > 0  // Only include cards that have been reviewed at least once
+            (card.repetitions || 0) > 0
         ).length;
     }, [flashcards, isReviewDismissed]);
 
-    // Mutations - Folders
     const createFolderMutation = useMutation({
         mutationFn: (variables: { name: string; parentId?: number | null }) => createFolder(token || "", variables),
         onSuccess: () => {
@@ -106,7 +100,6 @@ const CreateFlashcards = () => {
         onError: () => showToast("Failed to rename folder.", 'error')
     });
 
-    // Mutations
     const createMutation = useMutation({
         mutationFn: (newCard: CreateFlashcardDTO) => createFlashcard(token || "", newCard),
         onSuccess: () => {

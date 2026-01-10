@@ -1,7 +1,8 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api/flashcards";
-const FOLDER_API_URL = "http://localhost:8080/api/folders";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_URL = `${BASE_URL}/api/flashcards`;
+const FOLDER_API_URL = `${BASE_URL}/api/folders`;
 
 export interface Folder {
     ID: number;
@@ -98,14 +99,14 @@ export const deleteFolder = async (token: string, id: number): Promise<void> => 
 };
 
 export const fetchCurrentUser = async (token: string): Promise<any> => {
-    const response = await axios.get("http://localhost:8080/api/me", {
+    const response = await axios.get(`${BASE_URL}/api/me`, {
         headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
 };
 
 export const dismissSmartReview = async (token: string, hours: number = 24): Promise<void> => {
-    await axios.post("http://localhost:8080/api/user/dismiss-smart-review", { hours }, {
+    await axios.post(`${BASE_URL}/api/user/dismiss-smart-review`, { hours }, {
         headers: { Authorization: `Bearer ${token}` }
     });
 };
