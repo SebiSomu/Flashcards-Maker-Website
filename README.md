@@ -10,50 +10,34 @@
 
 ---
 
-## Features & Functionality
+## Features
 
-### Frontend Excellence
-The frontend is built with **React 18** and **TypeScript**, focusing on a seamless user experience:
-- **Intelligent Study Mode**: Powered by the **SM-2 Algorithm**, the UI dynamically schedules cards. It calculates the next review date based on your performance, which is then persisted in the database.
-- **Dynamic UI with Framer Motion**: 
-  - **Smooth Card Flips**: Realistic 3D animations when revealing the back of a flashcard.
-  - **Micro-interactions**: Hover effects, loading skeletons, and smooth transitions between pages.
-- **State Management & Data Fetching**:
-  - **React Query (TanStack Query)**: Handles all API interactions, providing automatic caching, revalidation, and loading states.
-  - **Zustand**: Used for a lightweight authentication store, ensuring the user stays logged in across sessions.
-- **Theme System**: Full implementation of Dark and Light modes using **Tailwind CSS** and **DaisyUI**, respecting system preferences or user choice.
-
-### Backend & Database Power
-The backend is a high-speed **Go (Golang)** service designed for reliability:
-- **Go + Fiber**: A modern web framework that provides extremely fast routing and sub-millisecond API response times.
-- **SQLite + GORM**: 
-  - **Portability**: Using SQLite allows the entire database to be contained in a single file (`flashcraft.db`), making it perfect for local development and simple deployments.
-  - **Relational Integrity**: GORM (Object Relational Mapper) ensures that flashcards are correctly linked to users and folders via Foreign Keys.
-  - **Data Retention**: All SRS metrics (Ease Factor, Interval, Repetitions) are stored per card to ensure your learning progress is never lost.
-- **Security**: 
-  - **JWT Authentication**: Secure, stateless user sessions.
-  - **Bcrypt**: Military-grade hashing for user passwords.
-  - **Rate Limiting**: Integrated middleware to prevent brute-force attacks on API endpoints.
+- **Frontend Excellence**: Built with **React 18**, **TypeScript**, and **Framer Motion** for smooth 3D card flips and a cinematic user experience.
+- **Intelligent SRS**: Integrated **SM-2 Algorithm** that dynamically schedules reviews based on your memory performance.
+- **Go Backend**: High-performance **Go (Fiber)** server providing sub-millisecond API responses and robust routing.
+- **Database Power**: **SQLite** storage with **GORM**, ensuring data integrity for flashcards, folders, and SRS metrics in a portable file.
+- **Security First**: JWT-based authentication, Bcrypt password hashing, and built-in rate-limiting protection.
+- **Theming**: Seamless **Dark and Light mode** support using Tailwind CSS and DaisyUI.
 
 ---
 
 ## Visual Showcase
 
-| Home Page | Study Session |
+| Home Page (Dark) | Home Page (Light) |
 | :---: | :---: |
-| ![FlashCraft Home](./src/assets/presentitive_image.png) | ![Study Mode](./src/assets/presentative_image2.png) |
+| ![Home Dark](./src/assets/presentitive_image.png) | ![Home Light](./src/assets/presentative_image2.png) |
 
-| Create Flashcards | Folder Management |
+| Authentication | Dashboard View |
 | :---: | :---: |
-| ![Create Card](./src/assets/presentative_image3.png) | ![Folders](./src/assets/presentative_image4.png) |
+| ![Login](./src/assets/presentative_image3.png) | ![Dashboard](./src/assets/presentative_image4.png) |
 
-| Interactive Deck | Dashboard View |
+| Create Flashcard | Edit Flashcard |
 | :---: | :---: |
-| ![Deck](./src/assets/presentative_image5.png) | ![Overview](./src/assets/presentative_image6.png) |
+| ![Create](./src/assets/presentative_image5.png) | ![Edit](./src/assets/presentative_image6.png) |
 
-| Light Mode | Mobile Responsive |
+| Study Mode (Question) | Study Mode (Rating) |
 | :---: | :---: |
-| ![Light Mode](./src/assets/presentative_image7.png) | ![Mobile](./src/assets/presentative_image8.png) |
+| ![Study 1](./src/assets/presentative_image7.png) | ![Study 2](./src/assets/presentative_image8.png) |
 
 ---
 
@@ -101,7 +85,7 @@ The backend is a high-speed **Go (Golang)** service designed for reliability:
    ```bash
    npm install
    ```
-2. Create your `.env` file (if needed, though Vite often uses `.env.local`):
+2. Create your `.env` file (if needed):
    ```bash
    cp .env.example .env
    ```
@@ -118,3 +102,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ---
 
 Designed with heart for lifelong learners.
+
