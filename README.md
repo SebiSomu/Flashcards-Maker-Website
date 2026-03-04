@@ -1,4 +1,4 @@
-# 🧠 FlashCraft - Study Smarter, Not Harder
+# FlashCraft - Study Smarter, Not Harder
 
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev/)
@@ -10,41 +10,73 @@
 
 ---
 
-## ✨ Features
+## Features & Functionality
 
-- **🚀 Intelligent Study Mode**: Uses the **SM2 algorithm** (SuperMemo-2) to schedule reviews exactly when you're about to forget them.
-- **📁 Organized Library**: Manage your learning journey with nested folders and tag-like categorization.
-- **🎨 Premium UI/UX**: 
-  - Smooth 3D-effect card flips.
-  - Dark/Light mode support.
-  - Responsive design for mobile and desktop.
-  - Interactive animations with Framer Motion.
-- **🔒 Secure Authentication**: JWT-based auth system with bcrypt password hashing and rate-limited endpoints.
-- **⚡ Blazing Fast**: Go-powered backend providing sub-millisecond API responses.
-- **📦 Zero-Config Storage**: Local SQLite database for easy deployment and portability.
+### Frontend Excellence
+The frontend is built with **React 18** and **TypeScript**, focusing on a seamless user experience:
+- **Intelligent Study Mode**: Powered by the **SM-2 Algorithm**, the UI dynamically schedules cards. It calculates the next review date based on your performance, which is then persisted in the database.
+- **Dynamic UI with Framer Motion**: 
+  - **Smooth Card Flips**: Realistic 3D animations when revealing the back of a flashcard.
+  - **Micro-interactions**: Hover effects, loading skeletons, and smooth transitions between pages.
+- **State Management & Data Fetching**:
+  - **React Query (TanStack Query)**: Handles all API interactions, providing automatic caching, revalidation, and loading states.
+  - **Zustand**: Used for a lightweight authentication store, ensuring the user stays logged in across sessions.
+- **Theme System**: Full implementation of Dark and Light modes using **Tailwind CSS** and **DaisyUI**, respecting system preferences or user choice.
+
+### Backend & Database Power
+The backend is a high-speed **Go (Golang)** service designed for reliability:
+- **Go + Fiber**: A modern web framework that provides extremely fast routing and sub-millisecond API response times.
+- **SQLite + GORM**: 
+  - **Portability**: Using SQLite allows the entire database to be contained in a single file (`flashcraft.db`), making it perfect for local development and simple deployments.
+  - **Relational Integrity**: GORM (Object Relational Mapper) ensures that flashcards are correctly linked to users and folders via Foreign Keys.
+  - **Data Retention**: All SRS metrics (Ease Factor, Interval, Repetitions) are stored per card to ensure your learning progress is never lost.
+- **Security**: 
+  - **JWT Authentication**: Secure, stateless user sessions.
+  - **Bcrypt**: Military-grade hashing for user passwords.
+  - **Rate Limiting**: Integrated middleware to prevent brute-force attacks on API endpoints.
 
 ---
 
-## 🛠️ Tech Stack
+## Visual Showcase
+
+| Home Page | Study Session |
+| :---: | :---: |
+| ![FlashCraft Home](./src/assets/presentitive_image.png) | ![Study Mode](./src/assets/presentative_image2.png) |
+
+| Create Flashcards | Folder Management |
+| :---: | :---: |
+| ![Create Card](./src/assets/presentative_image3.png) | ![Folders](./src/assets/presentative_image4.png) |
+
+| Interactive Deck | Dashboard View |
+| :---: | :---: |
+| ![Deck](./src/assets/presentative_image5.png) | ![Overview](./src/assets/presentative_image6.png) |
+
+| Light Mode | Mobile Responsive |
+| :---: | :---: |
+| ![Light Mode](./src/assets/presentative_image7.png) | ![Mobile](./src/assets/presentative_image8.png) |
+
+---
+
+## Tech Stack
 
 ### Frontend
-- **React 18** + **TypeScript**
-- **Vite** (Build Tool)
-- **Tailwind CSS** + **DaisyUI**
-- **React Query** (State Management & Caching)
-- **Zustand** (Auth persistence)
-- **Lucide React** (Iconography)
+- **React 18 & TypeScript** - Foundation of the UI logic.
+- **Vite** - Lightning-fast build tool and development server.
+- **Tailwind CSS & DaisyUI** - Utility-first styling with a rich component library.
+- **React Query** - Robust server state management.
+- **Framer Motion** - Cinematic 3D animations.
+- **Zustand** - Global state for authentication.
 
 ### Backend
-- **Go** (Golang)
-- **Fiber v2** (Web Framework)
-- **GORM** (ORM)
-- **SQLite** (Database)
-- **JWT** (Authentication)
+- **Go (Golang)** - Core language for performance.
+- **Fiber v2** - Express-like web framework for Go.
+- **SQLite** - Durable, zero-config relational database.
+- **GORM** - Developer-friendly ORM for database operations.
+- **JWT & Bcrypt** - Industry-standard security layers.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v18+)
@@ -69,7 +101,7 @@
    ```bash
    npm install
    ```
-2. Create your `.env` file:
+2. Create your `.env` file (if needed, though Vite often uses `.env.local`):
    ```bash
    cp .env.example .env
    ```
@@ -80,17 +112,9 @@
 
 ---
 
-## 🔐 Security & Production Notes
-
-- **Environment Variables**: Always use `.env` files for production secrets (JWT secrets, API URLs).
-- **Rate Limiting**: The backend is protected by a 20-req/30s rate limit on all endpoints to prevent abuse.
-- **CORS**: Ensure `ALLOWED_ORIGINS` in your backend `.env` matches your frontend production URL.
-
----
-
-## 📜 License
+## License
 Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
-Designed with ❤️ for lifelong learners.
+Designed with heart for lifelong learners.
